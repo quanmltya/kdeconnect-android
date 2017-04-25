@@ -23,15 +23,22 @@ package org.kde.kdeconnect.Plugins;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
+import android.support.annotation.StringRes;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.view.View;
 import android.widget.Button;
 
 import org.kde.kdeconnect.Device;
 import org.kde.kdeconnect.NetworkPackage;
+import org.kde.kdeconnect.UserInterface.MaterialActivity;
 import org.kde.kdeconnect.UserInterface.PluginSettingsActivity;
 import org.kde.kdeconnect.UserInterface.SettingsActivity;
+import org.kde.kdeconnect_tp.R;
 
 public abstract class Plugin {
 
@@ -203,6 +210,35 @@ public abstract class Plugin {
             }
         });
         return b;
+    }
+
+    //Permission from Manifest.permission.*
+    protected boolean isPermissionGranted(String permission) {
+        int result = ContextCompat.checkSelfPermission(context, permission);
+        return (result == PackageManager.PERMISSION_GRANTED);
+    }
+
+    protected AlertDialog requestPermissionDialog(Activity activity, String permissions, @StringRes int reason) {
+        return requestPermissionDialog(activity, new String[]{permissions}, reason);
+    }
+
+    protected AlertDialog requestPermissionDialog(final Activity activity, final String[] permissions, @StringRes int reason){
+        return new AlertDialog.Builder(activity)
+                .setTitle(getDisplayName())
+                .setMessage(reason)
+                .setPositiveButton(R.string.open_settings, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        ActivityCompat.requestPermissions(activity, permissions, 0);
+                    }
+                })
+                .setNegativeButton(R.string.cancel,new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        //Do nothing
+                    }
+                })
+                .create();
     }
 
 }

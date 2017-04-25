@@ -206,4 +206,6 @@
     <string name="open">Open</string>
     <string name="close">Close</string>
 
+    <string name="no_permissions_storage">You need to grant permissions to access the storage</string>
+
 </resources>

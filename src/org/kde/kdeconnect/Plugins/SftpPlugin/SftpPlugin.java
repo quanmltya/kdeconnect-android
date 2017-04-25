@@ -20,8 +20,16 @@
 
 package org.kde.kdeconnect.Plugins.SftpPlugin;
 
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.pm.PackageManager;
 import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.util.Log;
 
+import org.json.JSONException;
 import org.kde.kdeconnect.Helpers.StorageHelper;
 import org.kde.kdeconnect.NetworkPackage;
 import org.kde.kdeconnect.Plugins.Plugin;
@@ -38,6 +46,12 @@ public class SftpPlugin extends Plugin {
 
     private static final SimpleSftpServer server = new SimpleSftpServer();
 
+
+    @Override
+    public AlertDialog getErrorDialog(Activity deviceActivity) {
+        return requestPermissionDialog(deviceActivity, Manifest.permission.READ_EXTERNAL_STORAGE, R.string.no_permissions_storage);
+    }
+
     @Override
     public String getDisplayName() {
         return context.getResources().getString(R.string.pref_plugin_sftp);
@@ -50,6 +64,11 @@ public class SftpPlugin extends Plugin {
 
     @Override
     public boolean onCreate() {
+        if (!isPermissionGranted(Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            Log.e("SftpPlugin","NO PERMISSION");
+            return false;
+        }
+        Log.e("SftpPlugin","PERMISSION OK");
         server.init(context, device);
         return true;
     }
