@@ -61,14 +61,6 @@ public class PingPlugin extends Plugin {
 
         //Log.e("PingPackageReceiver", "was a ping!");
 
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        stackBuilder.addParentStack(MaterialActivity.class);
-        stackBuilder.addNextIntent(new Intent(context, MaterialActivity.class));
-        PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(
-            0,
-            PendingIntent.FLAG_UPDATE_CURRENT
-        );
-
         int id;
         String message;
         if (np.has("message")) {
@@ -82,7 +74,7 @@ public class PingPlugin extends Plugin {
         Notification noti = new NotificationCompat.Builder(context)
                 .setContentTitle(device.getName())
                 .setContentText(message)
-                .setContentIntent(resultPendingIntent)
+                .setContentIntent(NotificationHelper.createPendingIntentForActivity(context, MaterialActivity.class))
                 .setTicker(message)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setAutoCancel(true)
