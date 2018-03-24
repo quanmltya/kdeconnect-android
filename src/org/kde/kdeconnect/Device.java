@@ -397,7 +397,9 @@ public class Device implements BaseLink.PacketReceiver {
 
         Resources res = getContext().getResources();
 
-        Notification noti = new NotificationCompat.Builder(getContext())
+        final NotificationManager notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+        Notification noti = new NotificationCompat.Builder(getContext(), NotificationHelper.getDefaultChannelId(notificationManager))
                 .setContentTitle(res.getString(R.string.pairing_request_from, getName()))
                 .setContentText(res.getString(R.string.tap_to_answer))
                 .setContentIntent(pendingIntent)
@@ -409,7 +411,6 @@ public class Device implements BaseLink.PacketReceiver {
                 .setDefaults(Notification.DEFAULT_ALL)
                 .build();
 
-        final NotificationManager notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationHelper.notifyCompat(notificationManager, notificationId, noti);
 
         BackgroundService.addGuiInUseCounter(context);
