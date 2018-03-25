@@ -64,7 +64,6 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
     public static final int MIN_VERSION_WITH_SSL_SUPPORT = 6;
     public static final int MIN_VERSION_WITH_NEW_PORT_SUPPORT = 7;
 
-    final static int MIN_PORT_LEGACY = 1714;
     final static int MIN_PORT = 1716;
     final static int MAX_PORT = 1764;
     final static int PAYLOAD_TRANSFER_MIN_PORT = 1739;
@@ -75,7 +74,6 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
 
     ServerSocket tcpServer;
     private DatagramSocket udpServer;
-    private DatagramSocket udpServerOldPort;
 
     boolean listening = false;
 
@@ -399,7 +397,6 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
                         try {
                             InetAddress client = InetAddress.getByName(ipstr);
                             socket.send(new DatagramPacket(bytes, bytes.length, client, MIN_PORT));
-                            socket.send(new DatagramPacket(bytes, bytes.length, client, MIN_PORT_LEGACY));
                             //Log.i("KDE/LanLinkProvider","Udp identity package sent to address "+client);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -423,7 +420,6 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
             listening = true;
 
             udpServer = setupUdpListener(MIN_PORT);
-            udpServerOldPort = setupUdpListener(MIN_PORT_LEGACY);
 
             // Due to certificate request from SSL server to client, the certificate request message from device with latest android version to device with
             // old android version causes a FATAL ALERT message stating that incorrect certificate request
@@ -456,11 +452,6 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
         }
         try {
             udpServer.close();
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-        try {
-            udpServerOldPort.close();
         } catch (Exception e){
             e.printStackTrace();
         }
