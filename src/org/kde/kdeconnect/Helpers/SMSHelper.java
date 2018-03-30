@@ -36,6 +36,19 @@ import java.util.Map;
 public class SMSHelper {
 
     /**
+     * Define the columns which are extracted from the Android SMS database
+     */
+    protected static final String[] smsProjection = new String[]{
+            Telephony.Sms.ADDRESS,  // Phone number of the remote
+            Telephony.Sms.BODY,     // Body of the message
+            Telephony.Sms.DATE,     // Some date associated with the message (Received?)
+            Telephony.Sms.TYPE,     // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
+            Telephony.Sms.PERSON,   // Some obscure value that corresponds to the contact
+            Telephony.Sms.READ,     // Whether we have received a read report for this message (int)
+            Telephony.Sms.THREAD_ID, // Magic number which binds (message) threads
+    };
+
+    /**
      * Get the base address for the SMS content
      *
      * If we want to support API < 19, it seems to be possible to read via this query
@@ -77,16 +90,6 @@ public class SMSHelper {
         HashMap<Integer, List<Map<String, String>>> toReturn = new HashMap<>();
 
         Uri smsUri = getSMSUri();
-
-        final String[] smsProjection = new String[]{
-                Telephony.Sms.ADDRESS,  // Phone number of the remote
-                Telephony.Sms.BODY,     // Body of the message
-                Telephony.Sms.DATE,     // Some date associated with the message (Received?)
-                Telephony.Sms.TYPE,     // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
-                Telephony.Sms.PERSON,   // Some obscure value that corresponds to the contact
-                Telephony.Sms.READ,     // Whether we have received a read report for this message (int)
-                Telephony.Sms.THREAD_ID, // Magic number which binds (message) threads
-        };
 
         Cursor smsCursor = context.getContentResolver().query(
                 smsUri,
