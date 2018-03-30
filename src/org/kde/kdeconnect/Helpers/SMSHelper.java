@@ -73,8 +73,8 @@ public class SMSHelper {
      * @param context android.content.Context running the request
      * @return Mapping of thread ID to list of messages in that thread
      */
-    public static Map<String, List<Map<String, String>>> getSMS(Context context) {
-        HashMap<String, List<Map<String, String>>> toReturn = new HashMap<>();
+    public static Map<Integer, List<Map<String, String>>> getSMS(Context context) {
+        HashMap<Integer, List<Map<String, String>>> toReturn = new HashMap<>();
 
         Uri smsUri = getSMSUri();
 
@@ -96,9 +96,9 @@ public class SMSHelper {
                 null);
 
         if (smsCursor.moveToFirst()) {
-            int addressColumn = smsCursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID);
+            int threadColumn = smsCursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID);
             do {
-                String thread = smsCursor.getString(addressColumn);
+                int thread = smsCursor.getInt(threadColumn);
                 if (! toReturn.containsKey(thread))
                 {
                     toReturn.put(thread, new ArrayList<Map<String, String>>());
