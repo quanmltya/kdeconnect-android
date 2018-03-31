@@ -199,17 +199,26 @@ public class SMSHelper {
      * Represent a message and all of its interesting data columns
      */
     public static class Message extends HashMap<String, String> {
+
+        public static final String ADDRESS = Telephony.Sms.ADDRESS;   // Phone number of the remote
+        public static final String BODY = Telephony.Sms.BODY;         // Body of the message
+        public static final String DATE = Telephony.Sms.DATE;         // Some date associated with the message (Received?)
+        public static final String TYPE = Telephony.Sms.TYPE;         // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
+        public static final String PERSON = Telephony.Sms.PERSON;     // Some obscure value that corresponds to the contact
+        public static final String READ = Telephony.Sms.READ;         // Whether we have received a read report for this message (int)
+        public static final String THREAD_ID = ThreadID.lookupColumn; // Magic number which binds (message) threads
+
         /**
          * Define the columns which are extracted from the Android SMS database
          */
         public static final String[] smsColumns = new String[]{
-                Telephony.Sms.ADDRESS,  // Phone number of the remote
-                Telephony.Sms.BODY,     // Body of the message
-                Telephony.Sms.DATE,     // Some date associated with the message (Received?)
-                Telephony.Sms.TYPE,     // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
-                Telephony.Sms.PERSON,   // Some obscure value that corresponds to the contact
-                Telephony.Sms.READ,     // Whether we have received a read report for this message (int)
-                ThreadID.lookupColumn, // Magic number which binds (message) threads
+                Message.ADDRESS,
+                Message.BODY,
+                Message.DATE,
+                Message.TYPE,
+                Message.PERSON,
+                Message.READ,
+                Message.THREAD_ID,
         };
 
         @Override
