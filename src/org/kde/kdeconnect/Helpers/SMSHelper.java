@@ -78,6 +78,19 @@ public class SMSHelper {
     }
 
     /**
+     * Get the base address for all message conversations
+     */
+    protected static Uri getConversationUri() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            return Telephony.MmsSms.CONTENT_CONVERSATIONS_URI;
+        } else {
+            // As with getSMSUriBad, this is potentially unsafe depending on whether a specific
+            // manufacturer decided to do their own thing
+            return Uri.parse("content://mms-sms/conversations");
+        }
+    }
+
+    /**
      * Get all the SMS threads on the phone as well as a bunch of useful-looking data
      *
      * Return a map keyed by Android's Thread ID to a list of all the messages in that thread
@@ -98,7 +111,7 @@ public class SMSHelper {
                 null,
                 null);
 
-        if (smsCursor.moveToFirst()) {
+        if (smsCursor != null && smsCursor.moveToFirst()) {
             int threadColumn = smsCursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID);
             do {
                 int thread = smsCursor.getInt(threadColumn);
@@ -114,12 +127,58 @@ public class SMSHelper {
                 }
                 toReturn.get(thread).add(messageInfo);
             } while (smsCursor.moveToNext());
-        } else
-        {
+        } else {
             // No SMSes available?
         }
 
-    return toReturn;
+        if (smsCursor != null){
+            smsCursor.close();
+        }
+
+        return toReturn;
+    }
+
+    /**
+     * Get the last message from each conversation. Can use those thread_ids to look up more
+     * messages in those conversations
+     *
+     * @param context android.content.Context running the request
+     * @return Mapping of thread_id to the interesting information from the first message in each thread
+     */
+    public static Map<Integer, Map<String, String>> getConversations(Context context) {
+        HashMap<Integer, Map<String, String>> toReturn = new HashMap<>();
+
+        Uri conversationUri = getConversationUri();
+
+        Cursor conversationsCursor = context.getContentResolver().query(
+                conversationUri,
+                smsProjection,
+                null,
+                null,
+                null);
+
+        if (conversationsCursor != null && conversationsCursor.moveToFirst()) {
+            int threadColumn = conversationsCursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID);
+            do {
+                int thread = conversationsCursor.getInt(threadColumn);
+
+                Map<String, String> messageInfo = new HashMap<>();
+                for (int columnIdx = 0; columnIdx < conversationsCursor.getColumnCount(); columnIdx++) {
+                    String colName = conversationsCursor.getColumnName(columnIdx);
+                    String body = conversationsCursor.getString(columnIdx);
+                    messageInfo.put(colName, body);
+                }
+                toReturn.put(thread, messageInfo);
+            } while (conversationsCursor.moveToNext());
+        } else {
+            // No conversations available?
+        }
+
+        if (conversationsCursor != null){
+            conversationsCursor.close();
+        }
+
+        return toReturn;
     }
 
 }
