@@ -45,7 +45,7 @@ public class SMSHelper {
             Telephony.Sms.TYPE,     // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
             Telephony.Sms.PERSON,   // Some obscure value that corresponds to the contact
             Telephony.Sms.READ,     // Whether we have received a read report for this message (int)
-            Telephony.Sms.THREAD_ID, // Magic number which binds (message) threads
+            ThreadID.lookupColumn, // Magic number which binds (message) threads
     };
 
     /**
@@ -98,8 +98,8 @@ public class SMSHelper {
      * @param context android.content.Context running the request
      * @return Mapping of thread ID to list of messages in that thread
      */
-    public static Map<Integer, List<Map<String, String>>> getSMS(Context context) {
-        HashMap<Integer, List<Map<String, String>>> toReturn = new HashMap<>();
+    public static Map<ThreadID, List<Map<String, String>>> getSMS(Context context) {
+        HashMap<ThreadID, List<Map<String, String>>> toReturn = new HashMap<>();
 
         Uri smsUri = getSMSUri();
 
@@ -111,11 +111,11 @@ public class SMSHelper {
                 null);
 
         if (smsCursor != null && smsCursor.moveToFirst()) {
-            int threadColumn = smsCursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID);
+            int threadColumn = smsCursor.getColumnIndexOrThrow(ThreadID.lookupColumn);
             do {
                 int thread = smsCursor.getInt(threadColumn);
                 if (!toReturn.containsKey(thread)) {
-                    toReturn.put(thread, new ArrayList<Map<String, String>>());
+                    toReturn.put(new ThreadID(thread), new ArrayList<Map<String, String>>());
                 }
                 Map<String, String> messageInfo = new HashMap<>();
                 for (int columnIdx = 0; columnIdx < smsCursor.getColumnCount(); columnIdx++) {
@@ -143,8 +143,8 @@ public class SMSHelper {
      * @param context android.content.Context running the request
      * @return Mapping of thread_id to the interesting information from the first message in each thread
      */
-    public static Map<Integer, Map<String, String>> getConversations(Context context) {
-        HashMap<Integer, Map<String, String>> toReturn = new HashMap<>();
+    public static Map<ThreadID, Map<String, String>> getConversations(Context context) {
+        HashMap<ThreadID, Map<String, String>> toReturn = new HashMap<>();
 
         Uri conversationUri = getConversationUri();
 
@@ -156,7 +156,7 @@ public class SMSHelper {
                 null);
 
         if (conversationsCursor != null && conversationsCursor.moveToFirst()) {
-            int threadColumn = conversationsCursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID);
+            int threadColumn = conversationsCursor.getColumnIndexOrThrow(ThreadID.lookupColumn);
             do {
                 int thread = conversationsCursor.getInt(threadColumn);
 
@@ -166,7 +166,7 @@ public class SMSHelper {
                     String body = conversationsCursor.getString(columnIdx);
                     messageInfo.put(colName, body);
                 }
-                toReturn.put(thread, messageInfo);
+                toReturn.put(new ThreadID(thread), messageInfo);
             } while (conversationsCursor.moveToNext());
         } else {
             // No conversations available?
@@ -179,5 +179,34 @@ public class SMSHelper {
         return toReturn;
     }
 
+    /**
+     * Represent an ID used to uniquely identify a message thread
+     */
+    public static class ThreadID {
+        Integer threadID;
+        static final String lookupColumn = Telephony.Sms.THREAD_ID;
+
+        public ThreadID(Integer threadID) {
+            this.threadID = threadID;
+        }
+
+        public String toString() {
+            return this.threadID.toString();
+        }
+
+        @Override
+        public int hashCode() {
+            return this.threadID.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (other.getClass().isAssignableFrom(ThreadID.class)) {
+                return ((ThreadID) other).threadID.equals(this.threadID);
+            }
+
+            return false;
+        }
+    }
 }
 
