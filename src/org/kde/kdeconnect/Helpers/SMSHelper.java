@@ -36,19 +36,6 @@ import java.util.Map;
 public class SMSHelper {
 
     /**
-     * Define the columns which are extracted from the Android SMS database
-     */
-    protected static final String[] smsProjection = new String[]{
-            Telephony.Sms.ADDRESS,  // Phone number of the remote
-            Telephony.Sms.BODY,     // Body of the message
-            Telephony.Sms.DATE,     // Some date associated with the message (Received?)
-            Telephony.Sms.TYPE,     // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
-            Telephony.Sms.PERSON,   // Some obscure value that corresponds to the contact
-            Telephony.Sms.READ,     // Whether we have received a read report for this message (int)
-            ThreadID.lookupColumn, // Magic number which binds (message) threads
-    };
-
-    /**
      * Get the base address for the SMS content
      * <p>
      * If we want to support API < 19, it seems to be possible to read via this query
@@ -98,14 +85,14 @@ public class SMSHelper {
      * @param context android.content.Context running the request
      * @return Mapping of thread ID to list of messages in that thread
      */
-    public static Map<ThreadID, List<Map<String, String>>> getSMS(Context context) {
-        HashMap<ThreadID, List<Map<String, String>>> toReturn = new HashMap<>();
+    public static Map<ThreadID, List<Message>> getSMS(Context context) {
+        HashMap<ThreadID, List<Message>> toReturn = new HashMap<>();
 
         Uri smsUri = getSMSUri();
 
         Cursor smsCursor = context.getContentResolver().query(
                 smsUri,
-                smsProjection,
+                Message.smsColumns,
                 null,
                 null,
                 null);
@@ -115,9 +102,9 @@ public class SMSHelper {
             do {
                 int thread = smsCursor.getInt(threadColumn);
                 if (!toReturn.containsKey(thread)) {
-                    toReturn.put(new ThreadID(thread), new ArrayList<Map<String, String>>());
+                    toReturn.put(new ThreadID(thread), new ArrayList<Message>());
                 }
-                Map<String, String> messageInfo = new HashMap<>();
+                Message messageInfo = new Message();
                 for (int columnIdx = 0; columnIdx < smsCursor.getColumnCount(); columnIdx++) {
                     String colName = smsCursor.getColumnName(columnIdx);
                     String body = smsCursor.getString(columnIdx);
@@ -141,16 +128,16 @@ public class SMSHelper {
      * messages in those conversations
      *
      * @param context android.content.Context running the request
-     * @return Mapping of thread_id to the interesting information from the first message in each thread
+     * @return Mapping of thread_id to the first message in each thread
      */
-    public static Map<ThreadID, Map<String, String>> getConversations(Context context) {
-        HashMap<ThreadID, Map<String, String>> toReturn = new HashMap<>();
+    public static Map<ThreadID, Message> getConversations(Context context) {
+        HashMap<ThreadID, Message> toReturn = new HashMap<>();
 
         Uri conversationUri = getConversationUri();
 
         Cursor conversationsCursor = context.getContentResolver().query(
                 conversationUri,
-                smsProjection,
+                Message.smsColumns,
                 null,
                 null,
                 null);
@@ -160,7 +147,7 @@ public class SMSHelper {
             do {
                 int thread = conversationsCursor.getInt(threadColumn);
 
-                Map<String, String> messageInfo = new HashMap<>();
+                Message messageInfo = new Message();
                 for (int columnIdx = 0; columnIdx < conversationsCursor.getColumnCount(); columnIdx++) {
                     String colName = conversationsCursor.getColumnName(columnIdx);
                     String body = conversationsCursor.getString(columnIdx);
@@ -206,6 +193,33 @@ public class SMSHelper {
             }
 
             return false;
+        }
+    }
+
+    /**
+     * Represent a message and all of its interesting data columns
+     */
+    public static class Message extends HashMap<String, String> {
+        /**
+         * Define the columns which are extracted from the Android SMS database
+         */
+        public static final String[] smsColumns = new String[]{
+                Telephony.Sms.ADDRESS,  // Phone number of the remote
+                Telephony.Sms.BODY,     // Body of the message
+                Telephony.Sms.DATE,     // Some date associated with the message (Received?)
+                Telephony.Sms.TYPE,     // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
+                Telephony.Sms.PERSON,   // Some obscure value that corresponds to the contact
+                Telephony.Sms.READ,     // Whether we have received a read report for this message (int)
+                ThreadID.lookupColumn, // Magic number which binds (message) threads
+        };
+
+        @Override
+        public String toString() {
+            if (this.containsKey(Telephony.Sms.BODY)) {
+                return this.get(Telephony.Sms.BODY);
+            }
+
+            return super.toString();
         }
     }
 }
