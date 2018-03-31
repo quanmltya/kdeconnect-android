@@ -77,40 +77,39 @@ public class SMSHelper {
     }
 
     /**
-     * Get all the SMS threads on the phone as well as a bunch of useful-looking data
-     * <p>
-     * Return a map keyed by Android's Thread ID to a list of all the messages in that thread
-     * Each message is represented by a map containing the keys which seemed most useful and interesting
+     * Get all the messages in a requested thread
      *
-     * @param context android.content.Context running the request
-     * @return Mapping of thread ID to list of messages in that thread
+     * @param context  android.content.Context running the request
+     * @param threadID Thread to look up
+     * @return List of all messages in the thread
      */
-    public static Map<ThreadID, List<Message>> getSMS(Context context) {
-        HashMap<ThreadID, List<Message>> toReturn = new HashMap<>();
+    public static List<Message> getMessagesInThread(Context context, ThreadID threadID) {
+        List<Message> toReturn = new ArrayList<>();
 
         Uri smsUri = getSMSUri();
+
+        final String selection = ThreadID.lookupColumn + " == ?";
+        final String[] selectionArgs = new String[] { threadID.toString() };
 
         Cursor smsCursor = context.getContentResolver().query(
                 smsUri,
                 Message.smsColumns,
-                null,
-                null,
+                selection,
+                selectionArgs,
                 null);
 
         if (smsCursor != null && smsCursor.moveToFirst()) {
             int threadColumn = smsCursor.getColumnIndexOrThrow(ThreadID.lookupColumn);
             do {
                 int thread = smsCursor.getInt(threadColumn);
-                if (!toReturn.containsKey(thread)) {
-                    toReturn.put(new ThreadID(thread), new ArrayList<Message>());
-                }
+
                 Message messageInfo = new Message();
                 for (int columnIdx = 0; columnIdx < smsCursor.getColumnCount(); columnIdx++) {
                     String colName = smsCursor.getColumnName(columnIdx);
                     String body = smsCursor.getString(columnIdx);
                     messageInfo.put(colName, body);
                 }
-                toReturn.get(thread).add(messageInfo);
+                toReturn.add(messageInfo);
             } while (smsCursor.moveToNext());
         } else {
             // No SMSes available?
