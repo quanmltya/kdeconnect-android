@@ -50,7 +50,7 @@ public class SMSHelper {
 
     /**
      * Get the base address for the SMS content
-     *
+     * <p>
      * If we want to support API < 19, it seems to be possible to read via this query
      * This is highly undocumented and very likely varies between vendors but appears to work
      */
@@ -60,7 +60,7 @@ public class SMSHelper {
 
     /**
      * Get the base address for the SMS content
-     *
+     * <p>
      * Use the new API way which should work on any phone API >= 19
      */
     @RequiresApi(Build.VERSION_CODES.KITKAT)
@@ -71,8 +71,7 @@ public class SMSHelper {
     protected static Uri getSMSUri() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             return getSMSURIGood();
-        } else
-        {
+        } else {
             return getSMSURIBad();
         }
     }
@@ -92,9 +91,9 @@ public class SMSHelper {
 
     /**
      * Get all the SMS threads on the phone as well as a bunch of useful-looking data
-     *
+     * <p>
      * Return a map keyed by Android's Thread ID to a list of all the messages in that thread
-     *  Each message is represented by a map containing the keys which seemed most useful and interesting
+     * Each message is represented by a map containing the keys which seemed most useful and interesting
      *
      * @param context android.content.Context running the request
      * @return Mapping of thread ID to list of messages in that thread
@@ -115,8 +114,7 @@ public class SMSHelper {
             int threadColumn = smsCursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID);
             do {
                 int thread = smsCursor.getInt(threadColumn);
-                if (! toReturn.containsKey(thread))
-                {
+                if (!toReturn.containsKey(thread)) {
                     toReturn.put(thread, new ArrayList<Map<String, String>>());
                 }
                 Map<String, String> messageInfo = new HashMap<>();
@@ -131,7 +129,7 @@ public class SMSHelper {
             // No SMSes available?
         }
 
-        if (smsCursor != null){
+        if (smsCursor != null) {
             smsCursor.close();
         }
 
@@ -174,7 +172,7 @@ public class SMSHelper {
             // No conversations available?
         }
 
-        if (conversationsCursor != null){
+        if (conversationsCursor != null) {
             conversationsCursor.close();
         }
 
