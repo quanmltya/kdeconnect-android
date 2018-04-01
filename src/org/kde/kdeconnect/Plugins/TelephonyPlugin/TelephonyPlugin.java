@@ -353,15 +353,15 @@ public class TelephonyPlugin extends Plugin {
 
             reply.set("event", "sms");
 
-            reply.set("messageBody", message.get(Message.BODY));
+            reply.set(Message.BODY, message.get(Message.BODY));
 
-            reply.set("phoneNumber", message.get(Message.ADDRESS));
+            reply.set(Message.ADDRESS, message.get(Message.ADDRESS));
 
-            reply.set("messageDate", message.get(Message.DATE));
+            reply.set(Message.DATE, message.get(Message.DATE));
 
-            reply.set("messageType", message.get(Message.TYPE));
+            reply.set(Message.TYPE, message.get(Message.TYPE));
 
-            reply.set("threadID", message.get(Message.THREAD_ID));
+            reply.set(Message.THREAD_ID, message.get(Message.THREAD_ID));
 
             device.sendPacket(reply);
         }
