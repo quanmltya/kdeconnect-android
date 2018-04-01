@@ -53,6 +53,22 @@ import java.util.TimerTask;
 
 public class TelephonyPlugin extends Plugin {
 
+    /**
+     * Packet used to indicate a message has been pushed from the remote device
+     *
+     * The body should contain a mapping of all fields of the message to their values
+     *
+     * For example:
+     * { "event" : "sms",
+     *   "messageBody" : "Hello",
+     *   "phoneNumber" : "2021234567",
+     *   "messageDate" : "20150321434",
+     *   "messageType" : "-1",
+     *   "threadID" : "132"
+     * }
+     */
+    private final static String PACKET_TYPE_TELEPHONY_MESSAGE = "kdeconnect.telephony.message";
+
     private final static String PACKET_TYPE_TELEPHONY = "kdeconnect.telephony";
     public final static String PACKET_TYPE_TELEPHONY_REQUEST = "kdeconnect.telephony.request";
     private static final String KEY_PREF_BLOCKED_NUMBERS = "telephony_blocked_numbers";
@@ -333,7 +349,7 @@ public class TelephonyPlugin extends Plugin {
         Map<ThreadID, Message> conversations = SMSHelper.getConversations(this.context);
 
         for (Message message : conversations.values()) {
-            NetworkPacket reply = new NetworkPacket(PACKET_TYPE_TELEPHONY);
+            NetworkPacket reply = new NetworkPacket(PACKET_TYPE_TELEPHONY_MESSAGE);
 
             reply.set("event", "sms");
 
@@ -363,7 +379,10 @@ public class TelephonyPlugin extends Plugin {
 
     @Override
     public String[] getOutgoingPacketTypes() {
-        return new String[]{PACKET_TYPE_TELEPHONY};
+        return new String[]{
+                PACKET_TYPE_TELEPHONY,
+                PACKET_TYPE_TELEPHONY_MESSAGE,
+        };
     }
 
     @Override
