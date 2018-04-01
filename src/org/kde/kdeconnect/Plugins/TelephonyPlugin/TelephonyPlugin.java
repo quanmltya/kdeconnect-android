@@ -38,6 +38,9 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import org.kde.kdeconnect.Helpers.ContactsHelper;
+import org.kde.kdeconnect.Helpers.SMSHelper;
+import org.kde.kdeconnect.Helpers.SMSHelper.ThreadID;
+import org.kde.kdeconnect.Helpers.SMSHelper.Message;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
 import org.kde.kdeconnect_tp.BuildConfig;
@@ -53,6 +56,13 @@ public class TelephonyPlugin extends Plugin {
     private final static String PACKET_TYPE_TELEPHONY = "kdeconnect.telephony";
     public final static String PACKET_TYPE_TELEPHONY_REQUEST = "kdeconnect.telephony.request";
     private static final String KEY_PREF_BLOCKED_NUMBERS = "telephony_blocked_numbers";
+
+    /**
+     * Packet sent to request all conversations
+     *
+     * The request packet shall contain no body
+     */
+    public final static String PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATIONS = "kdeconnect.telephony.request_conversations";
 
     private int lastState = TelephonyManager.CALL_STATE_IDLE;
     private NetworkPacket lastPacket = null;
@@ -284,6 +294,9 @@ public class TelephonyPlugin extends Plugin {
 
     @Override
     public boolean onPacketReceived(NetworkPacket np) {
+        if (np.getType().equals(PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATIONS)) {
+            return this.handleRequestConversations(np);
+        }
         if (np.getString("action").equals("mute")) {
             if (!isMuted) {
                 AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
@@ -311,9 +324,41 @@ public class TelephonyPlugin extends Plugin {
         return false;
     }
 
+    /**
+     * Respond to a request for all conversations
+     *
+     * Send one packet of type PACKET_TYPE_TELEPHONY per message to be handled on the remote device
+     */
+    protected boolean handleRequestConversations(NetworkPacket packet) {
+        Map<ThreadID, Message> conversations = SMSHelper.getConversations(this.context);
+
+        for (Message message : conversations.values()) {
+            NetworkPacket reply = new NetworkPacket(PACKET_TYPE_TELEPHONY);
+
+            reply.set("event", "sms");
+
+            reply.set("messageBody", message.get(Message.BODY));
+
+            reply.set("phoneNumber", message.get(Message.ADDRESS));
+
+            reply.set("messageDate", message.get(Message.DATE));
+
+            reply.set("messageType", message.get(Message.TYPE));
+
+            reply.set("threadID", message.get(Message.THREAD_ID));
+
+            device.sendPacket(reply);
+        }
+
+        return true;
+    }
+
     @Override
     public String[] getSupportedPacketTypes() {
-        return new String[]{PACKET_TYPE_TELEPHONY_REQUEST};
+        return new String[]{
+                PACKET_TYPE_TELEPHONY_REQUEST,
+                PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATIONS,
+        };
     }
 
     @Override
