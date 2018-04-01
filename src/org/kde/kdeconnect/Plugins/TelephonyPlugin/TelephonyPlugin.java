@@ -37,6 +37,9 @@ import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.kde.kdeconnect.Helpers.ContactsHelper;
 import org.kde.kdeconnect.Helpers.SMSHelper;
 import org.kde.kdeconnect.Helpers.SMSHelper.ThreadID;
@@ -54,18 +57,22 @@ import java.util.TimerTask;
 public class TelephonyPlugin extends Plugin {
 
     /**
-     * Packet used to indicate a message has been pushed from the remote device
+     * Packet used to indicate a batch of messages has been pushed from the remote device
      *
-     * The body should contain a mapping of all fields of the message to their values
+     * The body should contain the key "messages" mapping to an array of messages
      *
      * For example:
-     * { "event" : "sms",
-     *   "messageBody" : "Hello",
-     *   "phoneNumber" : "2021234567",
-     *   "messageDate" : "20150321434",
-     *   "messageType" : "-1",
-     *   "threadID" : "132"
-     * }
+     * { "messages" : [
+     *   { "event" : "sms",
+     *     "messageBody" : "Hello",
+     *     "phoneNumber" : "2021234567",
+     *      "messageDate" : "1518846484880",
+     *      "messageType" : "2",
+     *      "threadID" : "132"
+     *    },
+     *    { ... },
+     *     ...
+     *   ]
      */
     private final static String PACKET_TYPE_TELEPHONY_MESSAGE = "kdeconnect.telephony.message";
 
@@ -343,28 +350,41 @@ public class TelephonyPlugin extends Plugin {
     /**
      * Respond to a request for all conversations
      *
-     * Send one packet of type PACKET_TYPE_TELEPHONY per message to be handled on the remote device
+     * Send one packet of type PACKET_TYPE_TELEPHONY_MESSAGE per message to be handled on the remote device
      */
     protected boolean handleRequestConversations(NetworkPacket packet) {
         Map<ThreadID, Message> conversations = SMSHelper.getConversations(this.context);
 
+        NetworkPacket reply = new NetworkPacket(PACKET_TYPE_TELEPHONY_MESSAGE);
+
+        JSONArray messages = new JSONArray();
+
         for (Message message : conversations.values()) {
-            NetworkPacket reply = new NetworkPacket(PACKET_TYPE_TELEPHONY_MESSAGE);
+            try {
+                JSONObject json = new JSONObject();
 
-            reply.set("event", "sms");
+                json.put("event", "sms");
 
-            reply.set(Message.BODY, message.get(Message.BODY));
+                json.put(Message.BODY, message.get(Message.BODY));
 
-            reply.set(Message.ADDRESS, message.get(Message.ADDRESS));
+                json.put(Message.ADDRESS, message.get(Message.ADDRESS));
 
-            reply.set(Message.DATE, message.get(Message.DATE));
+                json.put(Message.DATE, message.get(Message.DATE));
 
-            reply.set(Message.TYPE, message.get(Message.TYPE));
+                json.put(Message.TYPE, message.get(Message.TYPE));
 
-            reply.set(Message.THREAD_ID, message.get(Message.THREAD_ID));
+                json.put(Message.THREAD_ID, message.get(Message.THREAD_ID));
 
-            device.sendPacket(reply);
+                messages.put(json);
+            } catch (JSONException e)
+            {
+                Log.e("Conversations", "Error serializing message");
+            }
         }
+
+        reply.set("messages", messages);
+
+        device.sendPacket(reply);
 
         return true;
     }
