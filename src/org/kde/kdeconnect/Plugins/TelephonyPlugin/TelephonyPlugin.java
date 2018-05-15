@@ -76,6 +76,18 @@ public class TelephonyPlugin extends Plugin {
      */
     private final static String PACKET_TYPE_TELEPHONY_MESSAGE = "kdeconnect.telephony.message";
 
+    /**
+     * Packet used for simple telephony events
+     *
+     * It contains the key "event" which maps to a string indicating the type of event:
+     *  - "ringing" - A phone call is incoming
+     *  - "missedCall" - An incoming call was not answered
+     *  - "sms" - An incoming SMS message
+     *   - Note: As of this writing (15 May 2018) the SMS interface is being improved and this type of event
+     *     is no longer the preferred way of retrieving SMS. Use PACKET_TYPE_TELEPHONY_MESSAGE instead.
+     *
+     *  Depending on the event, other fields may be defined
+     */
     private final static String PACKET_TYPE_TELEPHONY = "kdeconnect.telephony";
     public final static String PACKET_TYPE_TELEPHONY_REQUEST = "kdeconnect.telephony.request";
     private static final String KEY_PREF_BLOCKED_NUMBERS = "telephony_blocked_numbers";
@@ -383,6 +395,7 @@ public class TelephonyPlugin extends Plugin {
         }
 
         reply.set("messages", messages);
+        reply.set("event", "batch_messages"); // Not really necessary, since this is implied by PACKET_TYPE_TELEPHONY_MESSAGE, but good for readability
 
         device.sendPacket(reply);
 
