@@ -373,19 +373,9 @@ public class TelephonyPlugin extends Plugin {
 
         for (Message message : conversations.values()) {
             try {
-                JSONObject json = new JSONObject();
+                JSONObject json = message.toJSONObject();
 
                 json.put("event", "sms");
-
-                json.put(Message.BODY, message.get(Message.BODY));
-
-                json.put(Message.ADDRESS, message.get(Message.ADDRESS));
-
-                json.put(Message.DATE, message.get(Message.DATE));
-
-                json.put(Message.TYPE, message.get(Message.TYPE));
-
-                json.put(Message.THREAD_ID, message.get(Message.THREAD_ID));
 
                 messages.put(json);
             } catch (JSONException e)

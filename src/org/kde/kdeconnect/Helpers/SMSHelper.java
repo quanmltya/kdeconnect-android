@@ -26,7 +26,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Telephony;
 import android.support.annotation.RequiresApi;
-import android.util.Log;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,6 +54,7 @@ public class SMSHelper {
      */
     @RequiresApi(Build.VERSION_CODES.KITKAT)
     protected static Uri getSMSURIGood() {
+        // TODO: Why not use Telephony.MmsSms.CONTENT_URI?
         return Telephony.Sms.CONTENT_URI;
     }
 
@@ -103,13 +106,13 @@ public class SMSHelper {
             do {
                 int thread = smsCursor.getInt(threadColumn);
 
-                Message messageInfo = new Message();
+                HashMap<String, String> messageInfo = new HashMap<>();
                 for (int columnIdx = 0; columnIdx < smsCursor.getColumnCount(); columnIdx++) {
                     String colName = smsCursor.getColumnName(columnIdx);
                     String body = smsCursor.getString(columnIdx);
                     messageInfo.put(colName, body);
                 }
-                toReturn.add(messageInfo);
+                toReturn.add(new Message(messageInfo));
             } while (smsCursor.moveToNext());
         } else {
             // No SMSes available?
@@ -146,13 +149,13 @@ public class SMSHelper {
             do {
                 int thread = conversationsCursor.getInt(threadColumn);
 
-                Message messageInfo = new Message();
+                HashMap<String, String> messageInfo = new HashMap<>();
                 for (int columnIdx = 0; columnIdx < conversationsCursor.getColumnCount(); columnIdx++) {
                     String colName = conversationsCursor.getColumnName(columnIdx);
                     String body = conversationsCursor.getString(columnIdx);
                     messageInfo.put(colName, body);
                 }
-                toReturn.put(new ThreadID(thread), messageInfo);
+                toReturn.put(new ThreadID(thread), new Message(messageInfo));
             } while (conversationsCursor.moveToNext());
         } else {
             // No conversations available?
@@ -198,17 +201,28 @@ public class SMSHelper {
     /**
      * Represent a message and all of its interesting data columns
      */
-    public static class Message extends HashMap<String, String> {
+    public static class Message {
 
-        public static final String ADDRESS = Telephony.Sms.ADDRESS;   // Phone number of the remote
+        public final String m_address;
+        public final String m_body;
+        public final long m_date;
+        public final int m_type;
+        public final int m_read;
+        public final int m_threadID;
+
+        /**
+         * Named constants which are used to construct a Message
+         * See: https://developer.android.com/reference/android/provider/Telephony.TextBasedSmsColumns.html for full documentation
+         */
+        public static final String ADDRESS = Telephony.Sms.ADDRESS;   // Contact information (phone number or otherwise) of the remote
         public static final String BODY = Telephony.Sms.BODY;         // Body of the message
-        public static final String DATE = Telephony.Sms.DATE;         // Some date associated with the message (Received?)
+        public static final String DATE = Telephony.Sms.DATE;         // Date (Unix epoch millis) associated with the message
         public static final String TYPE = Telephony.Sms.TYPE;         // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
         public static final String READ = Telephony.Sms.READ;         // Whether we have received a read report for this message (int)
         public static final String THREAD_ID = ThreadID.lookupColumn; // Magic number which binds (message) threads
 
         /**
-         * Define the columns which are extracted from the Android SMS database
+         * Define the columns which are to be extracted from the Android SMS database
          */
         public static final String[] smsColumns = new String[]{
                 Message.ADDRESS,
@@ -219,13 +233,39 @@ public class SMSHelper {
                 Message.THREAD_ID,
         };
 
+        public Message(final HashMap<String, String> messageInfo) {
+            m_address = messageInfo.get(Message.ADDRESS);
+            m_body = messageInfo.get(Message.BODY);
+            m_date = Long.parseLong(messageInfo.get(Message.DATE));
+            if (messageInfo.get(Message.TYPE) == null)
+            {
+                // To be honest, I have no idea why this happens. The docs say the TYPE field is mandatory.
+                // Just stick some junk in here and hope we can figure it out later.
+                // Quick investigation suggests that these are multi-target MMSes
+                m_type = -1;
+            } else {
+                m_type = Integer.parseInt(messageInfo.get(Message.TYPE));
+            }
+            m_read = Integer.parseInt(messageInfo.get(Message.READ));
+            m_threadID = Integer.parseInt(messageInfo.get(Message.THREAD_ID));
+        }
+
+        public JSONObject toJSONObject() throws JSONException {
+            JSONObject json = new JSONObject();
+
+            json.put(Message.ADDRESS, m_address);
+            json.put(Message.BODY, m_body);
+            json.put(Message.DATE, m_date);
+            json.put(Message.TYPE, m_type);
+            json.put(Message.READ, m_read);
+            json.put(Message.THREAD_ID, m_threadID);
+
+            return json;
+        }
+
         @Override
         public String toString() {
-            if (this.containsKey(Telephony.Sms.BODY)) {
-                return this.get(Telephony.Sms.BODY);
-            }
-
-            return super.toString();
+            return this.m_body;
         }
     }
 }
