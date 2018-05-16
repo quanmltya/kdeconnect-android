@@ -204,7 +204,6 @@ public class SMSHelper {
         public static final String BODY = Telephony.Sms.BODY;         // Body of the message
         public static final String DATE = Telephony.Sms.DATE;         // Some date associated with the message (Received?)
         public static final String TYPE = Telephony.Sms.TYPE;         // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
-        public static final String PERSON = Telephony.Sms.PERSON;     // Some obscure value that corresponds to the contact
         public static final String READ = Telephony.Sms.READ;         // Whether we have received a read report for this message (int)
         public static final String THREAD_ID = ThreadID.lookupColumn; // Magic number which binds (message) threads
 
@@ -216,7 +215,6 @@ public class SMSHelper {
                 Message.BODY,
                 Message.DATE,
                 Message.TYPE,
-                Message.PERSON,
                 Message.READ,
                 Message.THREAD_ID,
         };
