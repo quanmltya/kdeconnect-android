@@ -209,6 +209,7 @@ public class SMSHelper {
         public final int m_type;
         public final int m_read;
         public final int m_threadID;
+        public final int m_uID;
 
         /**
          * Named constants which are used to construct a Message
@@ -220,6 +221,7 @@ public class SMSHelper {
         public static final String TYPE = Telephony.Sms.TYPE;         // Compare with Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
         public static final String READ = Telephony.Sms.READ;         // Whether we have received a read report for this message (int)
         public static final String THREAD_ID = ThreadID.lookupColumn; // Magic number which binds (message) threads
+        public static final String U_ID = Telephony.Sms._ID;           // Something which uniquely identifies this message
 
         /**
          * Define the columns which are to be extracted from the Android SMS database
@@ -231,6 +233,7 @@ public class SMSHelper {
                 Message.TYPE,
                 Message.READ,
                 Message.THREAD_ID,
+                Message.U_ID,
         };
 
         public Message(final HashMap<String, String> messageInfo) {
@@ -248,6 +251,7 @@ public class SMSHelper {
             }
             m_read = Integer.parseInt(messageInfo.get(Message.READ));
             m_threadID = Integer.parseInt(messageInfo.get(Message.THREAD_ID));
+            m_uID = Integer.parseInt(messageInfo.get(Message.U_ID));
         }
 
         public JSONObject toJSONObject() throws JSONException {
@@ -259,6 +263,7 @@ public class SMSHelper {
             json.put(Message.TYPE, m_type);
             json.put(Message.READ, m_read);
             json.put(Message.THREAD_ID, m_threadID);
+            json.put(Message.U_ID, m_uID);
 
             return json;
         }

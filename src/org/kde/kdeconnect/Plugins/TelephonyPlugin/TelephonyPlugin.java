@@ -362,7 +362,7 @@ public class TelephonyPlugin extends Plugin {
     /**
      * Respond to a request for all conversations
      *
-     * Send one packet of type PACKET_TYPE_TELEPHONY_MESSAGE per message to be handled on the remote device
+     * Send one packet of type PACKET_TYPE_TELEPHONY_MESSAGE with the first message in all conversations
      */
     protected boolean handleRequestConversations(NetworkPacket packet) {
         Map<ThreadID, Message> conversations = SMSHelper.getConversations(this.context);
