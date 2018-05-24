@@ -28,6 +28,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
+import android.net.Network;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -50,6 +51,7 @@ import org.kde.kdeconnect_tp.BuildConfig;
 import org.kde.kdeconnect_tp.R;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -98,6 +100,15 @@ public class TelephonyPlugin extends Plugin {
      * The request packet shall contain no body
      */
     public final static String PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATIONS = "kdeconnect.telephony.request_conversations";
+
+    /**
+     * Packet sent to request all the messages in a particular conversation
+     *
+     * The body should contain the key "threadID" mapping to the threadID (as a string) being requested
+     * For example:
+     * { "threadID": 203 }
+     */
+    public final static String PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATION = "kdeconnect.telephony.request_conversation";
 
     private int lastState = TelephonyManager.CALL_STATE_IDLE;
     private NetworkPacket lastPacket = null;
@@ -332,6 +343,9 @@ public class TelephonyPlugin extends Plugin {
         if (np.getType().equals(PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATIONS)) {
             return this.handleRequestConversations(np);
         }
+        else if (np.getType().equals(PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATION)) {
+            return this.handleRequestConversation(np);
+        }
         if (np.getString("action").equals("mute")) {
             if (!isMuted) {
                 AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
@@ -392,11 +406,42 @@ public class TelephonyPlugin extends Plugin {
         return true;
     }
 
+    protected boolean handleRequestConversation(NetworkPacket packet) {
+        ThreadID threadID = new ThreadID(packet.getInt("threadID"));
+
+        List<Message> conversation = SMSHelper.getMessagesInThread(this.context, threadID);
+
+        NetworkPacket reply = new NetworkPacket(PACKET_TYPE_TELEPHONY_MESSAGE);
+
+        JSONArray messages = new JSONArray();
+
+        for (Message message : conversation) {
+            try {
+                JSONObject json = message.toJSONObject();
+
+                json.put("event", "sms");
+
+                messages.put(json);
+            } catch (JSONException e)
+            {
+                Log.e("Conversations", "Error serializing message");
+            }
+        }
+
+        reply.set("messages", messages);
+        reply.set("event", "batch_messages");
+
+        device.sendPacket(reply);
+
+        return true;
+    }
+
     @Override
     public String[] getSupportedPacketTypes() {
         return new String[]{
                 PACKET_TYPE_TELEPHONY_REQUEST,
                 PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATIONS,
+                PACKET_TYPE_TELEPHONY_REQUEST_CONVERSATION,
         };
     }
 
