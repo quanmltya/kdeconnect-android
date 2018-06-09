@@ -159,6 +159,17 @@ public class NetworkPacket {
         }
     }
 
+    public JSONObject getJSONObject(String key) {
+        return mBody.optJSONObject(key);
+    }
+
+    public void set(String key, JSONObject value) {
+        try {
+            mBody.put(key, value);
+        } catch (JSONException e) {
+        }
+    }
+
     public Set<String> getStringSet(String key) {
         JSONArray jsonArray = mBody.optJSONArray(key);
         if (jsonArray == null) return null;
@@ -264,7 +275,7 @@ public class NetworkPacket {
             np.mBody.put("deviceId", deviceId);
             np.mBody.put("deviceName", DeviceHelper.getDeviceName(context));
             np.mBody.put("protocolVersion", NetworkPacket.ProtocolVersion);
-            np.mBody.put("deviceType", DeviceHelper.isTablet() ? "tablet" : "phone");
+            np.mBody.put("deviceType", DeviceHelper.getDeviceType(context).toString());
             np.mBody.put("incomingCapabilities", new JSONArray(PluginFactory.getIncomingCapabilities(context)));
             np.mBody.put("outgoingCapabilities", new JSONArray(PluginFactory.getOutgoingCapabilities(context)));
         } catch (Exception e) {

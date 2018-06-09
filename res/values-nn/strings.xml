@@ -30,6 +30,7 @@
   <string name="cancel">Avbryt</string>
   <string name="open_settings">Opna innstillingar</string>
   <string name="no_permissions">Du må gje tilgang til lesing av varslingar</string>
+  <string name="no_permission_mprisreceiver">Du må gje tilgang til varslingar for å kunne kontrollera mediespelarar</string>
   <string name="send_ping">Send pingsignal</string>
   <string name="open_mpris_controls">Mediekontroll</string>
   <string name="remotekeyboard_editing_only_title">Handter eksterne tastetrykk berre ved redigering</string>
@@ -83,6 +84,10 @@
   <string name="incoming_file_text">%1s</string>
   <string name="outgoing_file_title">Sender fil til %1s</string>
   <string name="outgoing_files_title">Sender filer til %1s</string>
+  <plurals name="outgoing_files_text">
+    <item quantity="one">Sende %1$d fil</item>
+    <item quantity="other">Sende %1$d av %2$d filer</item>
+  </plurals>
   <string name="received_file_title">Fekk fil frå %1s</string>
   <string name="received_file_fail_title">Klarte ikkje ta imot fil frå %1s</string>
   <string name="received_file_text">Trykk for å opna «%1s»</string>
@@ -104,6 +109,7 @@
   <string name="remote_control">Fjernstyring</string>
   <string name="settings">Innstillingar for KDE Connect</string>
   <string name="mpris_play">Spel</string>
+  <string name="mpris_pause">Pause</string>
   <string name="mpris_previous">Førre</string>
   <string name="mpris_rew">Spol tilbake</string>
   <string name="mpris_ff">Spol fram</string>
@@ -119,6 +125,8 @@
     <item>1 minutt</item>
     <item>2 minutt</item>
   </string-array>
+  <string name="mpris_notification_settings_title">Vis varsling med avspelingskontrollar</string>
+  <string name="mpris_notification_settings_summary">Tillat å kontrollera mediespelarar utan å opna KDE Connect.</string>
   <string name="share_to">Del til …</string>
   <string name="protocol_version_older">Denne eininga brukar ein gammal protokollversjon</string>
   <string name="protocol_version_newer">Denne eininga brukar ein nyare protokollversjon</string>
@@ -139,6 +147,8 @@
   <string name="share_destination_customize_summary_disabled">Mottekne filer vert lagra i nedlastingsmappa</string>
   <string name="share_destination_customize_summary_enabled">Mottekne filer vert lagra i mappa nedanfor</string>
   <string name="share_destination_folder_preference">Målmappe</string>
+  <string name="share">Del</string>
+  <string name="share_received_file">Del «%s»</string>
   <string name="title_activity_notification_filter">Varslingsfilter</string>
   <string name="filter_apps_info">Varslingar vert synkroniserte for dei valde appane.</string>
   <string name="sftp_internal_storage">Intern lagring</string>
@@ -167,6 +177,7 @@
   <string name="plugin_not_supported">Dette tillegget er ikkje støtta av eininga</string>
   <string name="findmyphone_title">Finn telefonen min</string>
   <string name="findmyphone_title_tablet">Finn nettbrettet mitt</string>
+  <string name="findmyphone_title_tv">Finn TV-en min</string>
   <string name="findmyphone_description">Spel av lydsignal på eininga, slik at du lett kan finna ho</string>
   <string name="findmyphone_found">Fann</string>
   <string name="open">Opna</string>
@@ -181,4 +192,17 @@
   <string name="telepathy_permission_explanation">For å kunna lesa og skriva tekstmeldingar frå datamaskina må du gje appen tilgang til SMS</string>
   <string name="telephony_permission_explanation">For å kunna sjå telefonsamtalar og tekstmeldingar frå datamaskina må du gje appen tilgang til telefon- og SMS-funksjonar</string>
   <string name="telephony_optional_permission_explanation">For å kunna sjå namn på kontaktar i staden for berre telefonnummeret må du gje appen tilgang til kontaktlista di</string>
+  <string name="select_ringtone">Vel ringjetone</string>
+  <string name="telephony_pref_blocked_title">Blokkerte nummer</string>
+  <string name="telephony_pref_blocked_dialog_desc">Ikkje vis oppringingar og SMS-ar frå desse telefonnummera. Skriv inn eitt telefonnummer per linje.</string>
+  <string name="mpris_coverart_description">Omslagsbilete til gjeldande mediefil</string>
+  <string name="device_icon_description">Einingsikon</string>
+  <string name="settings_icon_description">Innstillingsikon</string>
+  <string name="add_command">Legg til kommando</string>
+  <string name="addcommand_explanation">Ingen kommandoar er registrerte</string>
+  <string name="addcommand_explanation2">Du kan leggja til nye kommandoar i systeminnstillingane til KDE Connect</string>
+  <string name="add_command_description">Du kan leggja til kommandoar på skrivebordet</string>
+  <string name="pref_plugin_mprisreceiver">Mediespelarkontrollar</string>
+  <string name="pref_plugin_mprisreceiver_desc">Kontroller mediespelarar på telefonen din frå ei anna eining</string>
+  <string name="dark_theme">Mørkt tema</string>
 </resources>

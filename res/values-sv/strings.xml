@@ -30,6 +30,7 @@
   <string name="cancel">Avbryt</string>
   <string name="open_settings">Öppna inställningarna</string>
   <string name="no_permissions">Du måste ge rättighet att komma åt underrättelser</string>
+  <string name="no_permission_mprisreceiver">För att kunna styra mediaspelare måste du ge tillgång till underrättelser</string>
   <string name="send_ping">Skicka ping</string>
   <string name="open_mpris_controls">Kontroll av multimedia</string>
   <string name="remotekeyboard_editing_only_title">Hantera bara externa tangenter vid redigering</string>
@@ -146,6 +147,8 @@
   <string name="share_destination_customize_summary_disabled">Mottagna filer hamnar i Nerladdningar</string>
   <string name="share_destination_customize_summary_enabled">Filer lagras i katalogen nedan</string>
   <string name="share_destination_folder_preference">Målkatalog</string>
+  <string name="share">Dela</string>
+  <string name="share_received_file">Dela \"%s\"</string>
   <string name="title_activity_notification_filter">Underrättelsefilter</string>
   <string name="filter_apps_info">Underrättelser synkroniseras för markerade applikationer.</string>
   <string name="sftp_internal_storage">Intern lagring</string>
@@ -174,6 +177,7 @@
   <string name="plugin_not_supported">Insticksprogrammet stöds inte av apparaten</string>
   <string name="findmyphone_title">Hitta min telefon</string>
   <string name="findmyphone_title_tablet">Hitta min surfplatta</string>
+  <string name="findmyphone_title_tv">Hitta min tv</string>
   <string name="findmyphone_description">Ringer till apparaten så att du kan hitta den</string>
   <string name="findmyphone_found">Hittade den</string>
   <string name="open">Öppna</string>
@@ -195,9 +199,10 @@
   <string name="device_icon_description">Enhetsikon</string>
   <string name="settings_icon_description">Inställningsikon</string>
   <string name="add_command">Lägg till ett kommando</string>
-  <string name="addcommand_name">Namn</string>
-  <string name="addcommand_command">Kommando</string>
-  <string name="command_confirm_needed">Du måste bekräfta kommandot på skrivbordet</string>
   <string name="addcommand_explanation">Det finns inga kommandon registrerade</string>
   <string name="addcommand_explanation2">Du kan lägga till nya kommandon i KDE-ansluts systeminställningar</string>
+  <string name="add_command_description">Du kan lägga till kommandon på skrivbordet</string>
+  <string name="pref_plugin_mprisreceiver">Styrning av mediaspelare</string>
+  <string name="pref_plugin_mprisreceiver_desc">Styr telefonens mediaspelare från en annan enhet</string>
+  <string name="dark_theme">Mörkt tema</string>
 </resources>

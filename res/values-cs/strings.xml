@@ -30,6 +30,7 @@
   <string name="cancel">Zrušit</string>
   <string name="open_settings">Otevřít nastavení</string>
   <string name="no_permissions">Pro zpřístupnění upozornění potřebujete oprávnění</string>
+  <string name="no_permission_mprisreceiver">Abyste byli schopni ovládat vaše přehrávače médií, musíte udělit přístup k oznámením</string>
   <string name="send_ping">Poslat ping</string>
   <string name="open_mpris_controls">Ovládání multimédií</string>
   <string name="remotekeyboard_editing_only_title">Ovládat vzdálené klávesy při editaci</string>
@@ -37,6 +38,7 @@
   <string name="remotekeyboard_connected">Vzdálené připojení klávesnice je aktivní</string>
   <string name="remotekeyboard_multiple_connections">Je k dispozici více než jedno připojení klávesnice. Vyberte zařízení pro jeho nastavení.</string>
   <string name="open_mousepad">Vzdálený vstup</string>
+  <string name="mousepad_info">Pohybujte prstem po obrazovce pro pohybování kurzorem myši. Ťukněte pro kliknutí a použijte dva/tři prsty jako pravé a prostřední tlačítko. Použijte 2 prsty pro posunování. Pro přetažení dlouze podržte.</string>
   <string name="mousepad_double_tap_settings_title">Nastavit činnost pro ťuknutí dvěma prsty</string>
   <string name="mousepad_triple_tap_settings_title">Nastavit činnost pro ťuknutí třemi prsty</string>
   <string name="mousepad_sensitivity_settings_title">Nastavit citlivost touchpadu</string>
@@ -82,6 +84,12 @@
   <string name="incoming_file_text">%1s</string>
   <string name="outgoing_file_title">Odesílám soubor do %1s</string>
   <string name="outgoing_files_title">Odesílám soubory do %1s</string>
+  <plurals name="outgoing_files_text">
+    <item quantity="one">Odeslán %1$d soubor</item>
+    <item quantity="few">Odeslány %1$d ze %2$d souborů</item>
+    <item quantity="many">Odesláno %1$d ze %2$d souborů</item>
+    <item quantity="other"/>
+  </plurals>
   <string name="received_file_title">Přijat soubor od %1s</string>
   <string name="received_file_fail_title">Selhalo přijímání souboru od %1s</string>
   <string name="received_file_text">Ťukněte pro otevření \'%1s\'</string>
@@ -103,6 +111,7 @@
   <string name="remote_control">Vzdálené ovládání</string>
   <string name="settings">Nastavení KDE Connect</string>
   <string name="mpris_play">Přehrát</string>
+  <string name="mpris_pause">Pozastavit</string>
   <string name="mpris_previous">Předchozí</string>
   <string name="mpris_rew">Přetočit zpět</string>
   <string name="mpris_ff">Rychle vpřed</string>
@@ -118,6 +127,8 @@
     <item>1 minuta</item>
     <item>2 minuty</item>
   </string-array>
+  <string name="mpris_notification_settings_title">Obrazit upozornění pro ovládání médií</string>
+  <string name="mpris_notification_settings_summary">Umožní ovládat přehrávače médií bez otevření KDE Connect.</string>
   <string name="share_to">Sdílet s...</string>
   <string name="protocol_version_older">Toto zařízení používá starou verzi protokolu</string>
   <string name="protocol_version_newer">Toto zařízení používá novější verzi protokolu</string>
@@ -138,6 +149,8 @@
   <string name="share_destination_customize_summary_disabled">Přijaté soubory se objeví v Downloads</string>
   <string name="share_destination_customize_summary_enabled">Soubory budou ukládány v adresáři níže</string>
   <string name="share_destination_folder_preference">Cílový adresář</string>
+  <string name="share">Sdílet</string>
+  <string name="share_received_file">Sdílet \"%s\"</string>
   <string name="title_activity_notification_filter">Filtr upozornění</string>
   <string name="filter_apps_info">Upozorňování mezi vybranými aplikacemi bude synchronizováno.</string>
   <string name="sftp_internal_storage">Interní úložiště</string>
@@ -166,6 +179,7 @@
   <string name="plugin_not_supported">Tento modul zařízení nepodporuje</string>
   <string name="findmyphone_title">Najít můj telefon</string>
   <string name="findmyphone_title_tablet">Najít můj tablet</string>
+  <string name="findmyphone_title_tv">Najít mou TV</string>
   <string name="findmyphone_description">Prozvoní toto zařízení, takže jej můžete najít</string>
   <string name="findmyphone_found">Nalezeno</string>
   <string name="open">Otevřít</string>
@@ -180,4 +194,17 @@
   <string name="telepathy_permission_explanation">Pro čtení a psaní SMS z počítače musíte udělit oprávnění k SMS</string>
   <string name="telephony_permission_explanation">Pro zobrazení telefonátů a SMS v počítači musíte udělit oprávnění k telefonování a SMS</string>
   <string name="telephony_optional_permission_explanation">Pro zobrazení jména kontaktu u telefonního čísla je potřeba udělit oprávnění ke kontaktům v telefonu</string>
+  <string name="select_ringtone">Vybrat vyzváněcí tón</string>
+  <string name="telephony_pref_blocked_title">Blokovaná čísla</string>
+  <string name="telephony_pref_blocked_dialog_desc">Nezobrazovat volnání a SMS z těchto čísel. Prosím, zadejte pouze jedno slovo na řádek.</string>
+  <string name="mpris_coverart_description">Obal současného média</string>
+  <string name="device_icon_description">Ikona zařízení</string>
+  <string name="settings_icon_description">Ikona nastavení</string>
+  <string name="add_command">Přidat příkaz</string>
+  <string name="addcommand_explanation">Nejsou registrovány žádné příkazy</string>
+  <string name="addcommand_explanation2">Nové příkazy můžete přidat v nastavení systému KDE Connect</string>
+  <string name="add_command_description">V pracovním prostředí můžete přidat příkazy</string>
+  <string name="pref_plugin_mprisreceiver">Ovládání přehrávače médií</string>
+  <string name="pref_plugin_mprisreceiver_desc">Ovládejte přehrávače médií na vašem telefonu z jiného zařízení</string>
+  <string name="dark_theme">Tmavý motiv</string>
 </resources>

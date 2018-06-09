@@ -29,6 +29,8 @@ import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.Log;
 
+import org.kde.kdeconnect.Device;
+
 import java.util.HashMap;
 
 public class DeviceHelper {
@@ -338,6 +340,7 @@ public class DeviceHelper {
         humanReadableNames.put("SM-G3815", "Samsung Galaxy Express II");
         humanReadableNames.put("SM-G386T", "Samsung Galaxy Avant");
         humanReadableNames.put("SM-G386T1", "Samsung Galaxy Avant");
+        humanReadableNames.put("SM-G388F", "Samsung Galaxy Xcover 3");
         humanReadableNames.put("SM-G7102", "Samsung Galaxy Grand II");
         humanReadableNames.put("SM-G800F", "Samsung Galaxy S5 Mini");
         humanReadableNames.put("SM-G860P", "Samsung Galaxy S5 Sport");
@@ -366,6 +369,34 @@ public class DeviceHelper {
         humanReadableNames.put("SM-G925T", "Galaxy S6 Edge");
         humanReadableNames.put("SM-G925V", "Galaxy S6 Edge");
         humanReadableNames.put("SM-G925W8", "Galaxy S6 Edge");
+        humanReadableNames.put("SM-G9500", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950F", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950T", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950S", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950K", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950L", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950P", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950A", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G9509", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G9508", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950R4", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950V", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950FD", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G950W8", "Samsung Galaxy S8");
+        humanReadableNames.put("SM-G9550", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955F", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955T", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955S", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955K", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955L", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955P", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955A", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G9559", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G9558", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955R4", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955V", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955FD", "Samsung Galaxy S8 Plus");
+        humanReadableNames.put("SM-G955W8", "Samsung Galaxy S8 Plus");
         humanReadableNames.put("SM-N7505", "Samsung Galaxy Note 3 Neo");
         humanReadableNames.put("SM-N900", "Samsung Galaxy Note 3");
         humanReadableNames.put("SM-N9005", "Samsung Galaxy Note 3");
@@ -475,10 +506,25 @@ public class DeviceHelper {
         }
     }
 
-    public static boolean isTablet() {
+    private static boolean isTablet() {
         Configuration config = Resources.getSystem().getConfiguration();
         //This assumes that the values for the screen sizes are consecutive, so XXLARGE > XLARGE > LARGE
         return ((config.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE);
+    }
+
+    private static boolean isTv(Context context) {
+        int uiMode = context.getResources().getConfiguration().uiMode;
+        return (uiMode & Configuration.UI_MODE_TYPE_MASK) == Configuration.UI_MODE_TYPE_TELEVISION;
+    }
+
+    public static Device.DeviceType getDeviceType(Context context) {
+        if (isTv(context)) {
+            return Device.DeviceType.Tv;
+        } else if (isTablet()) {
+            return Device.DeviceType.Tablet;
+        } else {
+            return Device.DeviceType.Phone;
+        }
     }
 
     //It returns getAndroidDeviceName() if no user-defined name has been set with setDeviceName().

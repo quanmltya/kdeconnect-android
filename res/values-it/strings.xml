@@ -30,6 +30,7 @@
   <string name="cancel">Annulla</string>
   <string name="open_settings">Apri impostazioni</string>
   <string name="no_permissions">Devi concedere i permessi per l\'accesso alle notifiche</string>
+  <string name="no_permission_mprisreceiver">Per poter controllare i tuoi lettori multimediali devi accordare l\'accesso alle notifiche</string>
   <string name="send_ping">Invia ping</string>
   <string name="open_mpris_controls">Controllo multimediale</string>
   <string name="remotekeyboard_editing_only_title">Gestisci i tasti remoti solo durante la modifica</string>
@@ -83,6 +84,10 @@
   <string name="incoming_file_text">%1s</string>
   <string name="outgoing_file_title">Invio file a %1s</string>
   <string name="outgoing_files_title">Invio file a %1s</string>
+  <plurals name="outgoing_files_text">
+    <item quantity="one">Inviato %1$d file</item>
+    <item quantity="other">Inviati %1$d di %2$d file</item>
+  </plurals>
   <string name="received_file_title">File ricevuto da %1s</string>
   <string name="received_file_fail_title">Ricezione file da %1s non riuscita</string>
   <string name="received_file_text">Tocca per aprire «%1s»</string>
@@ -142,6 +147,8 @@
   <string name="share_destination_customize_summary_disabled">I file ricevuti saranno visualizzati in Downloads</string>
   <string name="share_destination_customize_summary_enabled">I file saranno memorizzati nella cartella seguente</string>
   <string name="share_destination_folder_preference">Cartella di destinazione</string>
+  <string name="share">Condividi</string>
+  <string name="share_received_file">Condividi «%s»</string>
   <string name="title_activity_notification_filter">Filtro delle notifiche</string>
   <string name="filter_apps_info">Le notifiche saranno sincronizzate per le applicazioni selezionate.</string>
   <string name="sftp_internal_storage">Archiviazione interna</string>
@@ -170,6 +177,7 @@
   <string name="plugin_not_supported">Questa estensione non è supportata dal dispositivo</string>
   <string name="findmyphone_title">Trova il mio telefono</string>
   <string name="findmyphone_title_tablet">Trova il mio tablet</string>
+  <string name="findmyphone_title_tv">Trova il mio televisore</string>
   <string name="findmyphone_description">Fa squillare questo dispositivo per trovarlo</string>
   <string name="findmyphone_found">Trovato</string>
   <string name="open">Apri</string>
@@ -187,4 +195,14 @@
   <string name="select_ringtone">Seleziona una suoneria</string>
   <string name="telephony_pref_blocked_title">Numeri bloccati</string>
   <string name="telephony_pref_blocked_dialog_desc">Non mostrare le chiamate e gli SMS da questi numeri. Specifica un numero per riga</string>
+  <string name="mpris_coverart_description">Copertina del media attuale</string>
+  <string name="device_icon_description">Icona dispositivo</string>
+  <string name="settings_icon_description">Icona impostazioni</string>
+  <string name="add_command">Aggiungi un comando</string>
+  <string name="addcommand_explanation">Non ci sono comandi registrati</string>
+  <string name="addcommand_explanation2">Puoi aggiungere nuovi comandi nelle impostazioni di sistema di KDE Connect</string>
+  <string name="add_command_description">Puoi aggiungere comandi sul desktop</string>
+  <string name="pref_plugin_mprisreceiver">Controllo lettore multimediale</string>
+  <string name="pref_plugin_mprisreceiver_desc">Controlla i lettori multimediali del tuo telefono da un altro dispositivo</string>
+  <string name="dark_theme">Tema scuro</string>
 </resources>

@@ -28,11 +28,13 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 
+import org.kde.kdeconnect.UserInterface.ThemeUtil;
 import org.kde.kdeconnect_tp.R;
 
 public class FindMyPhoneActivity extends Activity {
@@ -55,6 +57,7 @@ public class FindMyPhoneActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeUtil.setUserPreferredTheme(this);
         setContentView(R.layout.activity_find_my_phone);
 
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -64,12 +67,7 @@ public class FindMyPhoneActivity extends Activity {
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
 
-        findViewById(R.id.bFindMyPhone).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                finish();
-            }
-        });
+        findViewById(R.id.bFindMyPhone).setOnClickListener(view -> finish());
     }
 
     @Override
@@ -82,10 +80,16 @@ public class FindMyPhoneActivity extends Activity {
             audioManager.setStreamVolume(AudioManager.STREAM_ALARM, audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
 
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-            String ringtone = prefs.getString("select_ringtone", "");
+            Uri ringtone;
+            String ringtoneString = prefs.getString("select_ringtone", "");
+            if (ringtoneString.isEmpty()) {
+                ringtone = Settings.System.DEFAULT_RINGTONE_URI;
+            } else {
+                ringtone = Uri.parse(ringtoneString);
+            }
 
             mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(this, Uri.parse(ringtone));
+            mediaPlayer.setDataSource(this, ringtone);
             mediaPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
             mediaPlayer.setLooping(true);
             mediaPlayer.prepare();
