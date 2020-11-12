@@ -1,28 +1,13 @@
 /*
- * Copyright 2015 Vineet Garg <grg.vineet@gmail.com>
+ * SPDX-FileCopyrightText: 2015 Vineet Garg <grg.vineet@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect.Backends.LanBackend;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
 
@@ -31,15 +16,13 @@ import org.kde.kdeconnect.Device;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect_tp.R;
 
-import java.security.KeyFactory;
 import java.security.cert.CertificateEncodingException;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class LanPairingHandler extends BasePairingHandler {
 
-    Timer mPairingTimer;
+    private Timer mPairingTimer;
 
     public LanPairingHandler(Device device, final PairingHandlerCallback callback) {
         super(device, callback);
@@ -54,14 +37,11 @@ public class LanPairingHandler extends BasePairingHandler {
     private NetworkPacket createPairPacket() {
         NetworkPacket np = new NetworkPacket(NetworkPacket.PACKET_TYPE_PAIR);
         np.set("pair", true);
-        SharedPreferences globalSettings = PreferenceManager.getDefaultSharedPreferences(mDevice.getContext());
-        String publicKey = "-----BEGIN PUBLIC KEY-----\n" + globalSettings.getString("publicKey", "").trim()+ "\n-----END PUBLIC KEY-----\n";
-        np.set("publicKey", publicKey);
         return np;
     }
 
     @Override
-    public void packageReceived(NetworkPacket np) throws Exception{
+    public void packageReceived(NetworkPacket np) {
 
         boolean wantsPair = np.getBoolean("pair");
 
@@ -76,15 +56,6 @@ public class LanPairingHandler extends BasePairingHandler {
         }
 
         if (wantsPair) {
-
-            //Retrieve their public key
-            try {
-                String publicKeyContent = np.getString("publicKey").replace("-----BEGIN PUBLIC KEY-----\n","").replace("-----END PUBLIC KEY-----\n", "");
-                byte[] publicKeyBytes = Base64.decode(publicKeyContent, 0);
-                mDevice.publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(publicKeyBytes));
-            } catch (Exception e) {
-                //IGNORE
-            }
 
             if (mPairStatus == PairStatus.Requested)  { //We started pairing
 
@@ -158,18 +129,14 @@ public class LanPairingHandler extends BasePairingHandler {
 
             @Override
             public void onFailure(Throwable e) {
-                if (e != null) {
-                    e.printStackTrace();
-                } else {
-                    Log.e("LanPairing/onFailure", "Unknown (null) exception");
-                }
+                Log.e("LanPairing/onFailure", "Exception", e);
                 mCallback.pairingFailed(mDevice.getContext().getString(R.string.error_could_not_send_package));
             }
         };
         mDevice.sendPacket(createPairPacket(), statusCallback);
     }
 
-    void hidePairingNotification() {
+    private void hidePairingNotification() {
         mDevice.hidePairingNotification();
         if (mPairingTimer != null) {
             mPairingTimer .cancel();
@@ -187,11 +154,7 @@ public class LanPairingHandler extends BasePairingHandler {
 
             @Override
             public void onFailure(Throwable e) {
-                if (e != null) {
-                    e.printStackTrace();
-                } else {
-                    Log.e("LanPairing/onFailure", "Unknown (null) exception");
-                }
+                Log.e("LanPairing/onFailure", "Exception", e);
                 mCallback.pairingFailed(mDevice.getContext().getString(R.string.error_not_reachable));
             }
         };
@@ -207,30 +170,20 @@ public class LanPairingHandler extends BasePairingHandler {
         mDevice.sendPacket(np);
     }
 
-    void pairingDone() {
+    private void pairingDone() {
         // Store device information needed to create a Device object in a future
         //Log.e("KDE/PairingDone", "Pairing Done");
         SharedPreferences.Editor editor = mDevice.getContext().getSharedPreferences(mDevice.getDeviceId(), Context.MODE_PRIVATE).edit();
-
-        if (mDevice.publicKey != null) {
-            try {
-                String encodedPublicKey = Base64.encodeToString(mDevice.publicKey.getEncoded(), 0);
-                editor.putString("publicKey", encodedPublicKey);
-            } catch (Exception e) {
-                Log.e("KDE/PairingDone", "Error encoding public key");
-            }
-        }
 
         try {
             String encodedCertificate = Base64.encodeToString(mDevice.certificate.getEncoded(), 0);
             editor.putString("certificate", encodedCertificate);
         } catch (NullPointerException n) {
-            Log.w("KDE/PairingDone", "Certificate is null, remote device does not support ssl");
+            Log.w("KDE/PairingDone", "Certificate is null, remote device does not support ssl", n);
         } catch (CertificateEncodingException c) {
-            Log.e("KDE/PairingDOne", "Error encoding certificate");
+            Log.e("KDE/PairingDOne", "Error encoding certificate", c);
         } catch (Exception e) {
-            e.printStackTrace();
-            Log.e("KDE/Pairng", "Exception");
+            Log.e("KDE/Pairng", "Exception", e);
         }
         editor.apply();
 

@@ -1,22 +1,8 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
-*/
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+ */
 
 package org.kde.kdeconnect.Plugins.PingPlugin;
 
@@ -24,22 +10,23 @@ import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import org.kde.kdeconnect.Helpers.NotificationHelper;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
 import org.kde.kdeconnect.UserInterface.MainActivity;
 import org.kde.kdeconnect_tp.R;
 
-
+@PluginFactory.LoadablePlugin
 public class PingPlugin extends Plugin {
 
-    public final static String PACKET_TYPE_PING = "kdeconnect.ping";
+    private final static String PACKET_TYPE_PING = "kdeconnect.ping";
 
     @Override
     public String getDisplayName() {
@@ -61,11 +48,10 @@ public class PingPlugin extends Plugin {
 
         //Log.e("PingPacketReceiver", "was a ping!");
 
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        stackBuilder.addParentStack(MainActivity.class);
-        stackBuilder.addNextIntent(new Intent(context, MainActivity.class));
-        PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(
+                context,
                 0,
+                new Intent(context, MainActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT
         );
 
@@ -79,7 +65,9 @@ public class PingPlugin extends Plugin {
             id = 42; //A unique id to create only one notification
         }
 
-        Notification noti = new NotificationCompat.Builder(context)
+        NotificationManager notificationManager = ContextCompat.getSystemService(context, NotificationManager.class);
+
+        Notification noti = new NotificationCompat.Builder(context, NotificationHelper.Channels.DEFAULT)
                 .setContentTitle(device.getName())
                 .setContentText(message)
                 .setContentIntent(resultPendingIntent)
@@ -87,9 +75,9 @@ public class PingPlugin extends Plugin {
                 .setSmallIcon(R.drawable.ic_notification)
                 .setAutoCancel(true)
                 .setDefaults(Notification.DEFAULT_ALL)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
                 .build();
 
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationHelper.notifyCompat(notificationManager, id, noti);
 
         return true;

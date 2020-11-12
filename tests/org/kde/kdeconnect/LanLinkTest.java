@@ -1,33 +1,25 @@
 /*
- * Copyright 2015 Vineet Garg <grg.vineet@gmail.com>
+ * SPDX-FileCopyrightText: 2015 Vineet Garg <grg.vineet@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect;
 
-import android.test.AndroidTestCase;
+import android.content.Context;
 import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.kde.kdeconnect.Backends.LanBackend.LanLink;
 import org.kde.kdeconnect.Backends.LanBackend.LanLinkProvider;
 import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,21 +29,24 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
-public class LanLinkTest extends AndroidTestCase {
+import javax.net.ssl.SSLSocket;
 
-    LanLink badLanLink;
-    LanLink goodLanLink;
+import static org.junit.Assert.assertEquals;
 
-    OutputStream badOutputStream;
-    OutputStream goodOutputStream;
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({Log.class})
+public class LanLinkTest {
 
-    Device.SendPacketStatusCallback callback;
+    private LanLink badLanLink;
+    private LanLink goodLanLink;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    private OutputStream goodOutputStream;
 
-        System.setProperty("dexmaker.dexcache", getContext().getCacheDir().getPath());
+    private Device.SendPacketStatusCallback callback;
+
+    @Before
+    public void setUp() throws Exception {
+        PowerMockito.mockStatic(Log.class);
 
         LanLinkProvider linkProvider = Mockito.mock(LanLinkProvider.class);
         Mockito.when(linkProvider.getName()).thenReturn("LanLinkProvider");
@@ -59,22 +54,24 @@ public class LanLinkTest extends AndroidTestCase {
         callback = Mockito.mock(Device.SendPacketStatusCallback.class);
 
         goodOutputStream = Mockito.mock(OutputStream.class);
-        badOutputStream = Mockito.mock(OutputStream.class);
+        OutputStream badOutputStream = Mockito.mock(OutputStream.class);
         Mockito.doThrow(new IOException("AAA")).when(badOutputStream).write(Mockito.any(byte[].class));
 
 
-        Socket socketMock = Mockito.mock(Socket.class);
+        SSLSocket socketMock = Mockito.mock(SSLSocket.class);
         Mockito.when(socketMock.getRemoteSocketAddress()).thenReturn(new InetSocketAddress(5000));
         Mockito.when(socketMock.getOutputStream()).thenReturn(goodOutputStream);
 
-        Socket socketBadMock = Mockito.mock(Socket.class);
+        SSLSocket socketBadMock = Mockito.mock(SSLSocket.class);
         Mockito.when(socketBadMock.getRemoteSocketAddress()).thenReturn(new InetSocketAddress(5000));
         Mockito.when(socketBadMock.getOutputStream()).thenReturn(badOutputStream);
 
-        goodLanLink = new LanLink(getContext(), "testDevice", linkProvider, socketMock, LanLink.ConnectionStarted.Remotely);
-        badLanLink = new LanLink(getContext(), "testDevice", linkProvider, socketBadMock, LanLink.ConnectionStarted.Remotely);
+        Context context = Mockito.mock(Context.class);
+        goodLanLink = new LanLink(context, "testDevice", linkProvider, socketMock, LanLink.ConnectionStarted.Remotely);
+        badLanLink = new LanLink(context, "testDevice", linkProvider, socketBadMock, LanLink.ConnectionStarted.Remotely);
     }
 
+    @Test
     public void testSendPacketSuccess() throws JSONException {
 
         NetworkPacket testPacket = Mockito.mock(NetworkPacket.class);
@@ -88,6 +85,7 @@ public class LanLinkTest extends AndroidTestCase {
         Mockito.verify(callback).onSuccess();
     }
 
+    @Test
     public void testSendPacketFail() throws JSONException {
 
         NetworkPacket testPacket = Mockito.mock(NetworkPacket.class);
@@ -98,23 +96,23 @@ public class LanLinkTest extends AndroidTestCase {
 
         badLanLink.sendPacket(testPacket, callback);
 
-        Mockito.verify(callback).onFailure(Mockito.any(RuntimeException.class));
+        Mockito.verify(callback).onFailure(Mockito.any(IOException.class));
 
     }
 
-
+    @Test
     public void testSendPayload() throws Exception {
 
         class Downloader extends Thread {
 
             NetworkPacket np;
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-            public void setNetworkPacket(NetworkPacket networkPacket) {
+            void setNetworkPacket(NetworkPacket networkPacket) {
                 this.np = networkPacket;
             }
 
-            public ByteArrayOutputStream getOutputStream() {
+            ByteArrayOutputStream getOutputStream() {
                 return outputStream;
             }
 
@@ -128,18 +126,17 @@ public class LanLinkTest extends AndroidTestCase {
                         int tcpPort = np.getPayloadTransferInfo().getInt("port");
                         InetSocketAddress address = new InetSocketAddress(5000);
                         socket.connect(new InetSocketAddress(address.getAddress(), tcpPort));
-                        np.setPayload(socket.getInputStream(), np.getPayloadSize());
+                        np.setPayload(new NetworkPacket.Payload(socket.getInputStream(), np.getPayloadSize()));
                     } catch (Exception e) {
                         socket.close();
-                        e.printStackTrace();
-                        Log.e("KDE/LanLinkTest", "Exception connecting to remote socket");
+                        Log.e("KDE/LanLinkTest", "Exception connecting to remote socket", e);
                         throw e;
                     }
 
-                    final InputStream input = np.getPayload();
+                    final InputStream input = np.getPayload().getInputStream();
                     final long fileLength = np.getPayloadSize();
 
-                    byte data[] = new byte[1024];
+                    byte[] data = new byte[1024];
                     long progress = 0, prevProgressPercentage = 0;
                     int count;
                     while ((count = input.read(data)) >= 0) {
@@ -158,8 +155,7 @@ public class LanLinkTest extends AndroidTestCase {
                     input.close();
 
                 } catch (Exception e) {
-                    Log.e("Downloader Test", "Exception");
-                    e.printStackTrace();
+                    Log.e("Downloader Test", "Exception", e);
                 }
             }
         }
@@ -194,7 +190,7 @@ public class LanLinkTest extends AndroidTestCase {
         Mockito.when(sharePacket.hasPayload()).thenReturn(true);
         Mockito.when(sharePacket.hasPayloadTransferInfo()).thenReturn(true);
         Mockito.doAnswer(invocationOnMock -> sharePacketJson.toString()).when(sharePacket).serialize();
-        Mockito.when(sharePacket.getPayload()).thenReturn(new ByteArrayInputStream(data));
+        Mockito.when(sharePacket.getPayload()).thenReturn(new NetworkPacket.Payload(new ByteArrayInputStream(data), -1));
         Mockito.when(sharePacket.getPayloadSize()).thenReturn((long) data.length);
         Mockito.doAnswer(invocationOnMock -> sharePacketJson.getJSONObject("payloadTransferInfo")).when(sharePacket).getPayloadTransferInfo();
         Mockito.doAnswer(invocationOnMock -> {
@@ -220,9 +216,9 @@ public class LanLinkTest extends AndroidTestCase {
 
         try {
             // Wait 1 secs for downloader to finish (if some error, it will continue and assert will fail)
-            downloader.join(1 * 1000);
+            downloader.join(1000);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("Test", "Exception", e);
             throw e;
         }
         assertEquals(new String(data), new String(downloader.getOutputStream().toByteArray()));

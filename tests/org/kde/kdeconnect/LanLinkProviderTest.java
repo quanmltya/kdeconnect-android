@@ -1,50 +1,48 @@
 /*
- * Copyright 2015 Vineet Garg <grg.vineet@gmail.com>
+ * SPDX-FileCopyrightText: 2015 Vineet Garg <grg.vineet@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect;
 
-import android.test.AndroidTestCase;
+import android.util.Log;
 
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.kde.kdeconnect.Backends.LanBackend.LanLink;
 import org.kde.kdeconnect.Backends.LanBackend.LanLinkProvider;
+import org.kde.kdeconnect.Helpers.DeviceHelper;
 import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.Socket;
 import java.util.HashMap;
 
-public class LanLinkProviderTest extends AndroidTestCase {
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 
-    private LanLinkProvider linkProvider;
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({DeviceHelper.class, Log.class})
+public class LanLinkProviderTest {
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() {
+        PowerMockito.mockStatic(DeviceHelper.class);
+        PowerMockito.when(DeviceHelper.getDeviceId(any())).thenReturn("123");
 
-        System.setProperty("dexmaker.dexcache", getContext().getCacheDir().getPath());
-
-        linkProvider = new LanLinkProvider(getContext());
+        PowerMockito.mockStatic(Log.class);
     }
 
+    @Test
     public void testIdentityPacketReceived() throws Exception {
+
+        LanLinkProvider linkProvider = new LanLinkProvider(null);
 
         NetworkPacket networkPacket = Mockito.mock(NetworkPacket.class);
         Mockito.when(networkPacket.getType()).thenReturn("kdeconnect.identity");

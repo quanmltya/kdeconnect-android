@@ -1,25 +1,12 @@
 /*
- * Copyright 2015 Vineet Garg <grg.vineet@gmail.com>
+ * SPDX-FileCopyrightText: 2015 Vineet Garg <grg.vineet@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
  */
 
 package org.kde.kdeconnect.Plugins.NotificationsPlugin;
 
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -28,27 +15,30 @@ import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
+import android.widget.CheckBox;
 import android.widget.CheckedTextView;
 import android.widget.ListView;
 
-import org.kde.kdeconnect.BackgroundService;
-import org.kde.kdeconnect.Helpers.StringsHelper;
 import org.kde.kdeconnect.UserInterface.ThemeUtil;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.TextViewCompat;
+
 import org.kde.kdeconnect_tp.R;
+import org.kde.kdeconnect_tp.databinding.ActivityNotificationFilterBinding;
 
 import java.util.Arrays;
 import java.util.List;
 
+//TODO: Turn this into a PluginSettingsFragment
 public class NotificationFilterActivity extends AppCompatActivity {
-
+    private ActivityNotificationFilterBinding binding;
     private AppDatabase appDatabase;
-    private ListView listView;
 
     static class AppListInfo {
 
@@ -85,10 +75,10 @@ public class NotificationFilterActivity extends AppCompatActivity {
             CheckedTextView checkedTextView = (CheckedTextView) view;
             if (position == 0) {
                 checkedTextView.setText(R.string.all);
-                checkedTextView.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+                TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(checkedTextView, null, null, null, null);
             } else {
                 checkedTextView.setText(apps[position - 1].name);
-                checkedTextView.setCompoundDrawablesWithIntrinsicBounds(apps[position - 1].icon, null, null, null);
+                TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(checkedTextView, apps[position - 1].icon, null, null, null);
                 checkedTextView.setCompoundDrawablePadding((int) (8 * getResources().getDisplayMetrics().density));
             }
 
@@ -101,11 +91,12 @@ public class NotificationFilterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeUtil.setUserPreferredTheme(this);
-        setContentView(R.layout.activity_notification_filter);
+
+        binding = ActivityNotificationFilterBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         appDatabase = new AppDatabase(NotificationFilterActivity.this, false);
 
         new Thread(() -> {
-
             PackageManager packageManager = getPackageManager();
             List<ApplicationInfo> appList = packageManager.getInstalledApplications(0);
             int count = appList.size();
@@ -120,7 +111,7 @@ public class NotificationFilterActivity extends AppCompatActivity {
                 apps[i].isEnabled = appDatabase.isEnabled(appInfo.packageName);
             }
 
-            Arrays.sort(apps, (lhs, rhs) -> StringsHelper.compare(lhs.name, rhs.name));
+            Arrays.sort(apps, (lhs, rhs) -> lhs.name.compareToIgnoreCase(rhs.name));
 
             runOnUiThread(this::displayAppList);
         }).start();
@@ -128,15 +119,13 @@ public class NotificationFilterActivity extends AppCompatActivity {
     }
 
     private void displayAppList() {
-
-        listView = (ListView) findViewById(R.id.lvFilterApps);
+        final ListView listView = binding.lvFilterApps;
         AppListAdapter adapter = new AppListAdapter();
         listView.setAdapter(adapter);
         listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+        listView.setLongClickable(true);
         listView.setOnItemClickListener((adapterView, view, i, l) -> {
-
             if (i == 0) {
-
                 boolean enabled = listView.isItemChecked(0);
                 for (int j = 0; j < apps.length; j++) {
                     listView.setItemChecked(j, enabled);
@@ -148,26 +137,68 @@ public class NotificationFilterActivity extends AppCompatActivity {
                 apps[i - 1].isEnabled = checked;
             }
         });
+        listView.setOnItemLongClickListener((adapterView, view, i, l) -> {
+            if(i == 0)
+                return true;
+            Context context = this;
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            View mView = getLayoutInflater().inflate(R.layout.popup_notificationsfilter, null);
+            builder.setMessage(context.getResources().getString(R.string.extra_options));
 
+            ListView lv = mView.findViewById(R.id.extra_options_list);
+            final String[] options = new String[] {
+                    context.getResources().getString(R.string.privacy_options)
+            };
+            ArrayAdapter<String> extra_options_adapter = new ArrayAdapter<>(this,
+                    android.R.layout.simple_list_item_1, options);
+            lv.setAdapter(extra_options_adapter);
+            builder.setView(mView);
+
+            AlertDialog ad = builder.create();
+
+            lv.setOnItemClickListener((new_adapterView, new_view, new_i, new_l) -> {
+                switch (new_i){
+                    case 0:
+                        AlertDialog.Builder myBuilder = new AlertDialog.Builder(context);
+                        String packageName = apps[i - 1].pkg;
+
+                        View myView = getLayoutInflater().inflate(R.layout.privacy_options, null);
+                        CheckBox checkbox_contents = myView.findViewById(R.id.checkbox_contents);
+                        checkbox_contents.setChecked(appDatabase.getPrivacy(packageName, AppDatabase.PrivacyOptions.BLOCK_CONTENTS));
+                        checkbox_contents.setText(context.getResources().getString(R.string.block_contents));
+                        CheckBox checkbox_images = myView.findViewById(R.id.checkbox_images);
+                        checkbox_images.setChecked(appDatabase.getPrivacy(packageName, AppDatabase.PrivacyOptions.BLOCK_IMAGES));
+                        checkbox_images.setText(context.getResources().getString(R.string.block_images));
+
+                        myBuilder.setView(myView);
+                        myBuilder.setTitle(context.getResources().getString(R.string.privacy_options));
+                        myBuilder.setPositiveButton(context.getResources().getString(R.string.ok), (dialog, id) -> dialog.dismiss());
+                        myBuilder.setMessage(context.getResources().getString(R.string.set_privacy_options));
+
+                        checkbox_contents.setOnCheckedChangeListener((compoundButton, b) ->
+                                appDatabase.setPrivacy(packageName, AppDatabase.PrivacyOptions.BLOCK_CONTENTS,
+                                        compoundButton.isChecked()));
+                        checkbox_images.setOnCheckedChangeListener((compoundButton, b) ->
+                                appDatabase.setPrivacy(packageName, AppDatabase.PrivacyOptions.BLOCK_IMAGES,
+                                        compoundButton.isChecked()));
+
+                        ad.cancel();
+                        myBuilder.show();
+                        break;
+                }
+            });
+
+            ad.show();
+            return true;
+        });
+
+        listView.setItemChecked(0, appDatabase.getAllEnabled()); //"Select all" button
         for (int i = 0; i < apps.length; i++) {
             listView.setItemChecked(i + 1, apps[i].isEnabled);
         }
 
         listView.setVisibility(View.VISIBLE);
-        findViewById(R.id.spinner).setVisibility(View.GONE);
-
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        BackgroundService.addGuiInUseCounter(this);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        BackgroundService.removeGuiInUseCounter(this);
+        binding.spinner.setVisibility(View.GONE);
     }
 
     private Drawable resizeIcon(Drawable icon, int maxSize) {

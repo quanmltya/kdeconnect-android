@@ -3,20 +3,23 @@ package org.kde.kdeconnect.Plugins.RunCommandPlugin;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Gravity;
 import android.widget.TextView;
 
 import org.kde.kdeconnect.BackgroundService;
 import org.kde.kdeconnect.Device;
+import org.kde.kdeconnect.UserInterface.ThemeUtil;
 import org.kde.kdeconnect_tp.R;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 public class RunCommandUrlActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        ThemeUtil.setUserPreferredTheme(this);
         super.onCreate(savedInstanceState);
 
         if (getIntent().getAction() != null) {
@@ -64,7 +67,7 @@ public class RunCommandUrlActivity extends AppCompatActivity {
         }
     }
 
-    void error(int message) {
+    private void error(int message) {
         TextView view = new TextView(this);
         view.setText(message);
         view.setGravity(Gravity.CENTER);

@@ -1,56 +1,48 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
-*/
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+ */
 
 package org.kde.kdeconnect.UserInterface;
 
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.ListView;
-import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+
+import com.klinker.android.send_message.Utils;
 
 import org.kde.kdeconnect.BackgroundService;
 import org.kde.kdeconnect.Device;
-import org.kde.kdeconnect.Helpers.NetworkHelper;
 import org.kde.kdeconnect.Helpers.SecurityHelpers.SslHelper;
+import org.kde.kdeconnect.Helpers.TelephonyHelper;
 import org.kde.kdeconnect.Plugins.Plugin;
-import org.kde.kdeconnect.UserInterface.List.CustomItem;
+import org.kde.kdeconnect.Plugins.SMSPlugin.SMSPlugin;
+import org.kde.kdeconnect.UserInterface.List.FailedPluginListItem;
 import org.kde.kdeconnect.UserInterface.List.ListAdapter;
 import org.kde.kdeconnect.UserInterface.List.PluginItem;
-import org.kde.kdeconnect.UserInterface.List.SmallEntryItem;
+import org.kde.kdeconnect.UserInterface.List.PluginListHeaderItem;
+import org.kde.kdeconnect.UserInterface.List.SetDefaultAppPluginListItem;
 import org.kde.kdeconnect_tp.R;
+import org.kde.kdeconnect_tp.databinding.ActivityDeviceBinding;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -59,59 +51,88 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DeviceFragment extends Fragment {
 
-    static final String ARG_DEVICE_ID = "deviceId";
-    static final String ARG_FROM_DEVICE_LIST = "fromDeviceList";
+    private static final String ARG_DEVICE_ID = "deviceId";
+    private static final String ARG_FROM_DEVICE_LIST = "fromDeviceList";
 
-    View rootView;
-    static String mDeviceId; //Static because if we get here by using the back button in the action bar, the extra deviceId will not be set.
-    Device device;
+    private static final String TAG = "KDE/DeviceFragment";
 
-    MainActivity mActivity;
+    private String mDeviceId;
+    private Device device;
 
-    ArrayList<ListAdapter.Item> pluginListItems;
+    private MainActivity mActivity;
+
+    private ArrayList<ListAdapter.Item> pluginListItems;
+
+    private ActivityDeviceBinding binding;
 
     public DeviceFragment() {
     }
 
-    public DeviceFragment(String deviceId, boolean fromDeviceList) {
+    public static DeviceFragment newInstance(String deviceId, boolean fromDeviceList) {
+        DeviceFragment frag = new DeviceFragment();
+
         Bundle args = new Bundle();
         args.putString(ARG_DEVICE_ID, deviceId);
         args.putBoolean(ARG_FROM_DEVICE_LIST, fromDeviceList);
-        this.setArguments(args);
-    }
+        frag.setArguments(args);
 
-    public DeviceFragment(String deviceId, MainActivity activity) {
-        this.mActivity = activity;
-        Bundle args = new Bundle();
-        args.putString(ARG_DEVICE_ID, deviceId);
-        this.setArguments(args);
+        return frag;
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
         mActivity = ((MainActivity) getActivity());
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-        rootView = inflater.inflate(R.layout.activity_device, container, false);
-
-        final String deviceId = getArguments().getString(ARG_DEVICE_ID);
-        if (deviceId != null) {
-            mDeviceId = deviceId;
+        if (getArguments() == null || !getArguments().containsKey(ARG_DEVICE_ID)) {
+            throw new RuntimeException("You must instantiate a new DeviceFragment using DeviceFragment.newInstance()");
         }
 
-        setHasOptionsMenu(true);
+        mDeviceId = getArguments().getString(ARG_DEVICE_ID);
+    }
 
-        //Log.e("DeviceFragment", "device: " + deviceId);
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        binding = ActivityDeviceBinding.inflate(inflater, container, false);
+
+        binding.pairButton.setOnClickListener(v -> {
+            binding.pairButton.setVisibility(View.GONE);
+            binding.pairMessage.setText("");
+            binding.pairProgress.setVisibility(View.VISIBLE);
+            BackgroundService.RunCommand(mActivity, service -> {
+                device = service.getDevice(mDeviceId);
+                if (device == null) return;
+                device.requestPairing();
+            });
+        });
+        binding.acceptButton.setOnClickListener(v -> {
+            if (device != null) {
+                device.acceptPairing();
+                binding.pairingButtons.setVisibility(View.GONE);
+            }
+        });
+        binding.rejectButton.setOnClickListener(v -> {
+            if (device != null) {
+                //Remove listener so buttons don't show for a while before changing the view
+                device.removePluginsChangedListener(pluginsChangedListener);
+                device.removePairingCallback(pairingCallback);
+                device.rejectPairing();
+            }
+            mActivity.onDeviceSelected(null);
+        });
+
+        setHasOptionsMenu(true);
 
         BackgroundService.RunCommand(mActivity, service -> {
             device = service.getDevice(mDeviceId);
             if (device == null) {
-                Log.e("DeviceFragment", "Trying to display a device fragment but the device is not present");
+                Log.e(TAG, "Trying to display a device fragment but the device is not present");
                 mActivity.onDeviceSelected(null);
                 return;
             }
@@ -125,39 +146,12 @@ public class DeviceFragment extends Fragment {
 
         });
 
-        final Button pairButton = (Button) rootView.findViewById(R.id.pair_button);
-        pairButton.setOnClickListener(view -> {
-            pairButton.setVisibility(View.GONE);
-            ((TextView) rootView.findViewById(R.id.pair_message)).setText("");
-            rootView.findViewById(R.id.pair_progress).setVisibility(View.VISIBLE);
-            BackgroundService.RunCommand(mActivity, service -> {
-                device = service.getDevice(deviceId);
-                if (device == null) return;
-                device.requestPairing();
-            });
-        });
-
-        rootView.findViewById(R.id.accept_button).setOnClickListener(view -> BackgroundService.RunCommand(mActivity, service -> {
-            if (device != null) {
-                device.acceptPairing();
-                rootView.findViewById(R.id.pairing_buttons).setVisibility(View.GONE);
-            }
-        }));
-
-        rootView.findViewById(R.id.reject_button).setOnClickListener(view -> BackgroundService.RunCommand(mActivity, service -> {
-            if (device != null) {
-                //Remove listener so buttons don't show for a while before changing the view
-                device.removePluginsChangedListener(pluginsChangedListener);
-                device.removePairingCallback(pairingCallback);
-                device.rejectPairing();
-            }
-            mActivity.onDeviceSelected(null);
-        }));
-
-        return rootView;
+        return binding.getRoot();
     }
 
-    final Device.PluginsChangedListener pluginsChangedListener = device -> refreshUI();
+    String getDeviceId() { return mDeviceId; }
+
+    private final Device.PluginsChangedListener pluginsChangedListener = device -> refreshUI();
 
     @Override
     public void onDestroyView() {
@@ -167,14 +161,13 @@ public class DeviceFragment extends Fragment {
             device.removePluginsChangedListener(pluginsChangedListener);
             device.removePairingCallback(pairingCallback);
         });
+
         super.onDestroyView();
+        binding = null;
     }
 
     @Override
-    public void onPrepareOptionsMenu(Menu menu) {
-
-        //Log.e("DeviceFragment", "onPrepareOptionsMenu");
-
+    public void onPrepareOptionsMenu(@NonNull Menu menu) {
         super.onPrepareOptionsMenu(menu);
         menu.clear();
 
@@ -195,7 +188,7 @@ public class DeviceFragment extends Fragment {
         }
 
         menu.add(R.string.device_menu_plugins).setOnMenuItemClickListener(menuItem -> {
-            Intent intent = new Intent(mActivity, SettingsActivity.class);
+            Intent intent = new Intent(mActivity, PluginSettingsActivity.class);
             intent.putExtra("deviceId", mDeviceId);
             startActivity(intent);
             return true;
@@ -215,7 +208,7 @@ public class DeviceFragment extends Fragment {
                     builder.setMessage(context.getResources().getString(R.string.my_device_fingerprint) + "\n" + SslHelper.getCertificateHash(SslHelper.certificate) + "\n\n"
                             + context.getResources().getString(R.string.remote_device_fingerprint) + "\n" + SslHelper.getCertificateHash(device.certificate));
                 }
-                builder.create().show();
+                builder.show();
                 return true;
             });
         }
@@ -253,10 +246,8 @@ public class DeviceFragment extends Fragment {
         });
     }
 
-    void refreshUI() {
-        //Log.e("DeviceFragment", "refreshUI");
-
-        if (device == null || rootView == null) {
+    private void refreshUI() {
+        if (device == null || binding.getRoot() == null) {
             return;
         }
 
@@ -266,66 +257,56 @@ public class DeviceFragment extends Fragment {
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-
                 if (device.isPairRequestedByPeer()) {
-                    ((TextView) rootView.findViewById(R.id.pair_message)).setText(R.string.pair_requested);
-                    rootView.findViewById(R.id.pairing_buttons).setVisibility(View.VISIBLE);
-                    rootView.findViewById(R.id.pair_progress).setVisibility(View.GONE);
-                    rootView.findViewById(R.id.pair_button).setVisibility(View.GONE);
-                    rootView.findViewById(R.id.pair_request).setVisibility(View.VISIBLE);
+                    binding.pairMessage.setText(R.string.pair_requested);
+                    binding.pairingButtons.setVisibility(View.VISIBLE);
+                    binding.pairProgress.setVisibility(View.GONE);
+                    binding.pairButton.setVisibility(View.GONE);
+                    binding.pairRequestButtons.setVisibility(View.VISIBLE);
                 } else {
-
                     boolean paired = device.isPaired();
                     boolean reachable = device.isReachable();
-                    boolean onData = NetworkHelper.isOnMobileNetwork(getContext());
 
-                    rootView.findViewById(R.id.pairing_buttons).setVisibility(paired ? View.GONE : View.VISIBLE);
-                    rootView.findViewById(R.id.error_message_container).setVisibility((paired && !reachable) ? View.VISIBLE : View.GONE);
-                    rootView.findViewById(R.id.not_reachable_message).setVisibility((paired && !reachable && !onData) ? View.VISIBLE : View.GONE);
-                    rootView.findViewById(R.id.on_data_message).setVisibility((paired && !reachable && onData) ? View.VISIBLE : View.GONE);
+                    binding.pairingButtons.setVisibility(paired ? View.GONE : View.VISIBLE);
+                    binding.errorMessageContainer.setVisibility((paired && !reachable) ? View.VISIBLE : View.GONE);
+                    binding.notReachableMessage.setVisibility((paired && !reachable) ? View.VISIBLE : View.GONE);
 
                     try {
                         pluginListItems = new ArrayList<>();
 
-                        //Plugins button list
-                        final Collection<Plugin> plugins = device.getLoadedPlugins().values();
-                        for (final Plugin p : plugins) {
-                            if (!p.hasMainActivity()) continue;
-                            if (p.displayInContextMenu()) continue;
+                        if (paired && reachable) {
+                            //Plugins button list
+                            final Collection<Plugin> plugins = device.getLoadedPlugins().values();
+                            for (final Plugin p : plugins) {
+                                if (!p.hasMainActivity()) continue;
+                                if (p.displayInContextMenu()) continue;
 
-                            pluginListItems.add(new PluginItem(p, v -> p.startMainActivity(mActivity)));
+                                pluginListItems.add(new PluginItem(p, v -> p.startMainActivity(mActivity)));
+                            }
+                            DeviceFragment.this.createPluginsList(device.getPluginsWithoutPermissions(), R.string.plugins_need_permission, (plugin) -> {
+                                DialogFragment dialog = plugin.getPermissionExplanationDialog();
+                                if (dialog != null) {
+                                    dialog.show(getChildFragmentManager(), null);
+                                }
+                            });
+                            DeviceFragment.this.createPluginsList(device.getPluginsWithoutOptionalPermissions(), R.string.plugins_need_optional_permission, (plugin) -> {
+                                DialogFragment dialog = plugin.getOptionalPermissionExplanationDialog();
+
+                                if (dialog != null) {
+                                    dialog.show(getChildFragmentManager(), null);
+                                }
+                            });
                         }
 
-                        createPluginsList(device.getFailedPlugins(), R.string.plugins_failed_to_load, new PluginClickListener() {
-                            @Override
-                            void action() {
-                                plugin.getErrorDialog(mActivity).show();
-                            }
-                        });
-                        createPluginsList(device.getPluginsWithoutPermissions(), R.string.plugins_need_permission, new PluginClickListener() {
-                            @Override
-                            void action() {
-                                plugin.getPermissionExplanationDialog(mActivity).show();
-                            }
-                        });
-                        createPluginsList(device.getPluginsWithoutOptionalPermissions(), R.string.plugins_need_optional_permission, new PluginClickListener() {
-                            @Override
-                            void action() {
-                                plugin.getOptionalPermissionExplanationDialog(mActivity).show();
-                            }
-                        });
-
-                        ListView buttonsList = (ListView) rootView.findViewById(R.id.buttons_list);
                         ListAdapter adapter = new ListAdapter(mActivity, pluginListItems);
-                        buttonsList.setAdapter(adapter);
+                        binding.buttonsList.setAdapter(adapter);
 
                         mActivity.invalidateOptionsMenu();
 
                     } catch (IllegalStateException e) {
-                        e.printStackTrace();
                         //Ignore: The activity was closed while we were trying to update it
                     } catch (ConcurrentModificationException e) {
-                        Log.e("DeviceActivity", "ConcurrentModificationException");
+                        Log.e(TAG, "ConcurrentModificationException");
                         this.run(); //Try again
                     }
 
@@ -335,7 +316,7 @@ public class DeviceFragment extends Fragment {
 
     }
 
-    final Device.PairingCallback pairingCallback = new Device.PairingCallback() {
+    private final Device.PairingCallback pairingCallback = new Device.PairingCallback() {
 
         @Override
         public void incomingRequest() {
@@ -350,11 +331,11 @@ public class DeviceFragment extends Fragment {
         @Override
         public void pairingFailed(final String error) {
             mActivity.runOnUiThread(() -> {
-                if (rootView == null) return;
-                ((TextView) rootView.findViewById(R.id.pair_message)).setText(error);
-                rootView.findViewById(R.id.pair_progress).setVisibility(View.GONE);
-                rootView.findViewById(R.id.pair_button).setVisibility(View.VISIBLE);
-                rootView.findViewById(R.id.pair_request).setVisibility(View.GONE);
+                if (binding.getRoot() == null) return;
+                binding.pairMessage.setText(error);
+                binding.pairProgress.setVisibility(View.GONE);
+                binding.pairButton.setVisibility(View.VISIBLE);
+                binding.pairRequestButtons.setVisibility(View.GONE);
                 refreshUI();
             });
         }
@@ -362,114 +343,27 @@ public class DeviceFragment extends Fragment {
         @Override
         public void unpaired() {
             mActivity.runOnUiThread(() -> {
-                if (rootView == null) return;
-                ((TextView) rootView.findViewById(R.id.pair_message)).setText(R.string.device_not_paired);
-                rootView.findViewById(R.id.pair_progress).setVisibility(View.GONE);
-                rootView.findViewById(R.id.pair_button).setVisibility(View.VISIBLE);
-                rootView.findViewById(R.id.pair_request).setVisibility(View.GONE);
+                if (binding.getRoot() == null) return;
+                binding.pairMessage.setText(R.string.device_not_paired);
+                binding.pairProgress.setVisibility(View.GONE);
+                binding.pairButton.setVisibility(View.VISIBLE);
+                binding.pairRequestButtons.setVisibility(View.GONE);
                 refreshUI();
             });
         }
 
     };
 
-    public static void acceptPairing(final String devId, final MainActivity activity) {
-        final DeviceFragment frag = new DeviceFragment(devId, activity);
-        BackgroundService.RunCommand(activity, service -> {
-            Device dev = service.getDevice(devId);
-            if (dev == null) {
-                Log.w("rejectPairing", "Device no longer exists: " + devId);
-                return;
+    private void createPluginsList(ConcurrentHashMap<String, Plugin> plugins, int headerText, FailedPluginListItem.Action action) {
+        if (plugins.isEmpty())
+            return;
+
+        pluginListItems.add(new PluginListHeaderItem(headerText));
+        for (Plugin plugin : plugins.values()) {
+            if (!device.isPluginEnabled(plugin.getPluginKey())) {
+                continue;
             }
-            activity.getSupportActionBar().setTitle(dev.getName());
-
-            dev.addPairingCallback(frag.pairingCallback);
-            dev.addPluginsChangedListener(frag.pluginsChangedListener);
-
-            frag.device = dev;
-            frag.device.acceptPairing();
-
-            frag.refreshUI();
-
-        });
-    }
-
-    public static void rejectPairing(final String devId, final MainActivity activity) {
-        final DeviceFragment frag = new DeviceFragment(devId, activity);
-        BackgroundService.RunCommand(activity, service -> {
-            Device dev = service.getDevice(devId);
-            if (dev == null) {
-                Log.w("rejectPairing", "Device no longer exists: " + devId);
-                return;
-            }
-            activity.getSupportActionBar().setTitle(dev.getName());
-
-            dev.addPairingCallback(frag.pairingCallback);
-            dev.addPluginsChangedListener(frag.pluginsChangedListener);
-
-            frag.device = dev;
-
-            //Remove listener so buttons don't show for a while before changing the view
-            frag.device.removePluginsChangedListener(frag.pluginsChangedListener);
-            frag.device.removePairingCallback(frag.pairingCallback);
-            frag.device.rejectPairing();
-            activity.onDeviceSelected(null);
-
-            frag.refreshUI();
-        });
-    }
-
-    void createPluginsList(ConcurrentHashMap<String, Plugin> plugins, int headerText, PluginClickListener onClickListener) {
-        if (!plugins.isEmpty()) {
-
-            TextView header = new TextView(mActivity);
-            header.setPadding(
-                    0,
-                    ((int) (28 * getResources().getDisplayMetrics().density)),
-                    0,
-                    ((int) (8 * getResources().getDisplayMetrics().density))
-            );
-            header.setOnClickListener(null);
-            header.setOnLongClickListener(null);
-            header.setText(headerText);
-
-            pluginListItems.add(new CustomItem(header));
-            for (Map.Entry<String, Plugin> entry : plugins.entrySet()) {
-                String pluginKey = entry.getKey();
-                final Plugin plugin = entry.getValue();
-                if (device.isPluginEnabled(pluginKey)) {
-                    if (plugin == null) {
-                        pluginListItems.add(new SmallEntryItem(pluginKey));
-                    } else {
-                        PluginClickListener listener = onClickListener.clone();
-                        listener.plugin = plugin;
-                        pluginListItems.add(new SmallEntryItem(plugin.getDisplayName(), listener));
-                    }
-                }
-            }
+            pluginListItems.add(new FailedPluginListItem(plugin, action));
         }
     }
-
-    private abstract class PluginClickListener implements View.OnClickListener, Cloneable {
-
-        Plugin plugin;
-
-        @Override
-        public void onClick(View v) {
-            action();
-        }
-
-        @Override
-        public PluginClickListener clone() {
-            try {
-                return (PluginClickListener) super.clone();
-            } catch (CloneNotSupportedException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        abstract void action();
-    }
-
 }

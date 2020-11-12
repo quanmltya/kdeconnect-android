@@ -1,53 +1,65 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect.Plugins;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.support.annotation.StringRes;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.widget.Button;
 
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.kde.kdeconnect.Device;
 import org.kde.kdeconnect.NetworkPacket;
-import org.kde.kdeconnect.UserInterface.PluginSettingsActivity;
-import org.kde.kdeconnect.UserInterface.SettingsActivity;
+import org.kde.kdeconnect.UserInterface.AlertDialogFragment;
+import org.kde.kdeconnect.UserInterface.MainActivity;
+import org.kde.kdeconnect.UserInterface.PermissionsAlertDialogFragment;
+import org.kde.kdeconnect.UserInterface.PluginSettingsFragment;
 import org.kde.kdeconnect_tp.R;
 
 public abstract class Plugin {
-
     protected Device device;
     protected Context context;
     protected int permissionExplanation = R.string.permission_explanation;
     protected int optionalPermissionExplanation = R.string.optional_permission_explanation;
+    @Nullable
+    protected SharedPreferences preferences;
 
-    public final void setContext(Context context, Device device) {
+    public final void setContext(@NonNull Context context, @Nullable Device device) {
         this.device = device;
         this.context = context;
+
+        if (device != null) {
+            this.preferences = this.context.getSharedPreferences(this.getSharedPreferencesName(), Context.MODE_PRIVATE);
+        }
+    }
+
+    public String getSharedPreferencesName() {
+        if (device == null) {
+            throw new RuntimeException("You have to call setContext() before you can call getSharedPreferencesName()");
+        }
+
+        if (this.supportsDeviceSpecificSettings())
+            return this.device.getDeviceId() + "_" + this.getPluginKey() + "_preferences";
+        else
+            return this.getPluginKey() + "_preferences";
+    }
+
+    @Nullable
+    public SharedPreferences getPreferences() {
+        return this.preferences;
     }
 
     /**
@@ -123,16 +135,38 @@ public abstract class Plugin {
     }
 
     /**
-     * If hasSettings returns true, this will be called when the user
-     * wants to access this plugin preferences and should launch some
-     * kind of interface. The default implementation will launch a
-     * SettingsActivity with content from "yourplugin"_preferences.xml.
+     * Called to find out if a plugin supports device specific settings.
+     * If you return true your PluginSettingsFragment will use the device
+     * specific SharedPreferences to store the settings.
+     *
+     * @return true if this plugin supports device specific settings
      */
-    public void startPreferencesActivity(SettingsActivity parentActivity) {
-        Intent intent = new Intent(parentActivity, PluginSettingsActivity.class);
-        intent.putExtra("plugin_display_name", getDisplayName());
-        intent.putExtra("plugin_key", getPluginKey());
-        parentActivity.startActivity(intent);
+    public boolean supportsDeviceSpecificSettings() { return false; }
+
+    /**
+     * Called when it's time to move the plugin settings from the global preferences
+     * to device specific preferences
+     *
+     * @param globalSharedPreferences The global Preferences to copy the settings from
+     */
+    public void copyGlobalToDeviceSpecificSettings(SharedPreferences globalSharedPreferences) {}
+
+    /**
+     *  Called when the plugin should remove it's settings from the provided ShardPreferences
+     *
+     * @param sharedPreferences The SharedPreferences to remove the settings from
+     */
+    public void removeSettings(SharedPreferences sharedPreferences) {}
+
+    /**
+     * If hasSettings returns true, this will be called when the user
+     * wants to access this plugin's preferences. The default implementation
+     * will return a PluginSettingsFragment with content from "yourplugin"_preferences.xml
+     *
+     * @return The PluginSettingsFragment used to display this plugins settings
+     */
+    public PluginSettingsFragment getSettingsFragment(Activity activity) {
+        return PluginSettingsFragment.newInstance(getPluginKey());
     }
 
     /**
@@ -156,8 +190,30 @@ public abstract class Plugin {
     }
 
     /**
+     * Determine whether we should avoid loading this Plugin for {@link #device}.
+     * <p>
+     *     Called after {@link #setContext(Context, Device)} but before {@link #onCreate()}.
+     * </p>
+     * <p>
+     *     By default, this just checks if {@link #getMinSdk()} is greater than the
+     *     {@link Build.VERSION#SDK_INT SDK version} of this Android device.
+     * </p>
+     *
+     * @return false if it makes sense to call {@link #onCreate()}, true otherwise
+     */
+    @CallSuper
+    public boolean isIncompatible() {
+        return getMinSdk() > Build.VERSION.SDK_INT;
+    }
+
+    /**
      * Initialize the listeners and structures in your plugin.
-     * Should return true if initialization was successful.
+     * <p>
+     *     If {@link #isIncompatible()} returns false, this will <em>not</em>
+     *     be called.
+     * </p>
+     *
+     * @return true if initialization was successful, false otherwise
      */
     public boolean onCreate() {
         return true;
@@ -189,27 +245,12 @@ public abstract class Plugin {
      */
     public abstract String[] getOutgoingPacketTypes();
 
-    /**
-     * Creates a button that will be displayed in the user interface
-     * It can open an activity or perform any other action that the
-     * plugin would wants to expose to the user. Return null if no
-     * button should be displayed.
-     */
-    @Deprecated
-    public Button getInterfaceButton(final Activity activity) {
-        if (!hasMainActivity()) return null;
-        Button b = new Button(activity);
-        b.setText(getActionName());
-        b.setOnClickListener(view -> startMainActivity(activity));
-        return b;
+    protected String[] getRequiredPermissions() {
+        return ArrayUtils.EMPTY_STRING_ARRAY;
     }
 
-    public String[] getRequiredPermissions() {
-        return new String[0];
-    }
-
-    public String[] getOptionalPermissions() {
-        return new String[0];
+    protected String[] getOptionalPermissions() {
+        return ArrayUtils.EMPTY_STRING_ARRAY;
     }
 
     //Permission from Manifest.permission.*
@@ -218,7 +259,7 @@ public abstract class Plugin {
         return (result == PackageManager.PERMISSION_GRANTED);
     }
 
-    protected boolean arePermissionsGranted(String[] permissions) {
+    private boolean arePermissionsGranted(String[] permissions) {
         for (String permission : permissions) {
             if (!isPermissionGranted(permission)) {
                 return false;
@@ -227,18 +268,14 @@ public abstract class Plugin {
         return true;
     }
 
-    protected AlertDialog requestPermissionDialog(Activity activity, String permissions, @StringRes int reason) {
-        return requestPermissionDialog(activity, new String[]{permissions}, reason);
-    }
-
-    protected AlertDialog requestPermissionDialog(final Activity activity, final String[] permissions, @StringRes int reason) {
-        return new AlertDialog.Builder(activity)
+    private PermissionsAlertDialogFragment requestPermissionDialog(final String[] permissions, @StringRes int reason) {
+        return new PermissionsAlertDialogFragment.Builder()
                 .setTitle(getDisplayName())
                 .setMessage(reason)
-                .setPositiveButton(R.string.ok, (dialogInterface, i) -> ActivityCompat.requestPermissions(activity, permissions, 0))
-                .setNegativeButton(R.string.cancel, (dialogInterface, i) -> {
-                    //Do nothing
-                })
+                .setPositiveButton(R.string.ok)
+                .setNegativeButton(R.string.cancel)
+                .setPermissions(permissions)
+                .setRequestCode(MainActivity.RESULT_NEEDS_RELOAD)
                 .create();
     }
 
@@ -247,16 +284,12 @@ public abstract class Plugin {
      * the problem (and how to fix it, if possible) to the user.
      */
 
-    public AlertDialog getErrorDialog(Activity deviceActivity) {
-        return null;
+    public DialogFragment getPermissionExplanationDialog() {
+        return requestPermissionDialog(getRequiredPermissions(), permissionExplanation);
     }
 
-    public AlertDialog getPermissionExplanationDialog(Activity deviceActivity) {
-        return requestPermissionDialog(deviceActivity, getRequiredPermissions(), permissionExplanation);
-    }
-
-    public AlertDialog getOptionalPermissionExplanationDialog(Activity deviceActivity) {
-        return requestPermissionDialog(deviceActivity, getOptionalPermissions(), optionalPermissionExplanation);
+    public AlertDialogFragment getOptionalPermissionExplanationDialog() {
+        return requestPermissionDialog(getOptionalPermissions(), optionalPermissionExplanation);
     }
 
     public boolean checkRequiredPermissions() {
@@ -270,5 +303,4 @@ public abstract class Plugin {
     public int getMinSdk() {
         return Build.VERSION_CODES.BASE;
     }
-
 }

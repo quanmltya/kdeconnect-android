@@ -1,27 +1,12 @@
 /*
- * Copyright 2014 Saikrishna Arcot <saiarcot895@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Saikrishna Arcot <saiarcot895@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect.Plugins.MousePadPlugin;
 
 import android.content.Context;
-import android.os.Build;
 import android.util.AttributeSet;
 import android.util.SparseIntArray;
 import android.view.KeyEvent;
@@ -30,14 +15,13 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
 import org.kde.kdeconnect.BackgroundService;
-import org.kde.kdeconnect.Device;
 import org.kde.kdeconnect.NetworkPacket;
 
 public class KeyListenerView extends View {
 
     private String deviceId;
 
-    public static SparseIntArray SpecialKeysMap = new SparseIntArray();
+    public static final SparseIntArray SpecialKeysMap = new SparseIntArray();
 
     static {
         int i = 0;
@@ -51,31 +35,29 @@ public class KeyListenerView extends View {
         SpecialKeysMap.put(KeyEvent.KEYCODE_DPAD_DOWN, ++i);        // 7
         SpecialKeysMap.put(KeyEvent.KEYCODE_PAGE_UP, ++i);          // 8
         SpecialKeysMap.put(KeyEvent.KEYCODE_PAGE_DOWN, ++i);        // 9
-        if (Build.VERSION.SDK_INT >= 11) {
-            SpecialKeysMap.put(KeyEvent.KEYCODE_MOVE_HOME, ++i);    // 10
-            SpecialKeysMap.put(KeyEvent.KEYCODE_MOVE_END, ++i);     // 11
-            SpecialKeysMap.put(KeyEvent.KEYCODE_NUMPAD_ENTER, ++i); // 12
-            SpecialKeysMap.put(KeyEvent.KEYCODE_FORWARD_DEL, ++i);  // 13
-            SpecialKeysMap.put(KeyEvent.KEYCODE_ESCAPE, ++i);       // 14
-            SpecialKeysMap.put(KeyEvent.KEYCODE_SYSRQ, ++i);        // 15
-            SpecialKeysMap.put(KeyEvent.KEYCODE_SCROLL_LOCK, ++i);  // 16
-            ++i;           // 17
-            ++i;           // 18
-            ++i;           // 19
-            ++i;           // 20
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F1, ++i);           // 21
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F2, ++i);           // 22
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F3, ++i);           // 23
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F4, ++i);           // 24
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F5, ++i);           // 25
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F6, ++i);           // 26
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F7, ++i);           // 27
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F8, ++i);           // 28
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F9, ++i);           // 29
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F10, ++i);          // 30
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F11, ++i);          // 31
-            SpecialKeysMap.put(KeyEvent.KEYCODE_F12, ++i);          // 21
-        }
+        SpecialKeysMap.put(KeyEvent.KEYCODE_MOVE_HOME, ++i);    // 10
+        SpecialKeysMap.put(KeyEvent.KEYCODE_MOVE_END, ++i);     // 11
+        SpecialKeysMap.put(KeyEvent.KEYCODE_NUMPAD_ENTER, ++i); // 12
+        SpecialKeysMap.put(KeyEvent.KEYCODE_FORWARD_DEL, ++i);  // 13
+        SpecialKeysMap.put(KeyEvent.KEYCODE_ESCAPE, ++i);       // 14
+        SpecialKeysMap.put(KeyEvent.KEYCODE_SYSRQ, ++i);        // 15
+        SpecialKeysMap.put(KeyEvent.KEYCODE_SCROLL_LOCK, ++i);  // 16
+        ++i;           // 17
+        ++i;           // 18
+        ++i;           // 19
+        ++i;           // 20
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F1, ++i);           // 21
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F2, ++i);           // 22
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F3, ++i);           // 23
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F4, ++i);           // 24
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F5, ++i);           // 25
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F6, ++i);           // 26
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F7, ++i);           // 27
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F8, ++i);           // 28
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F9, ++i);           // 29
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F10, ++i);          // 30
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F11, ++i);          // 31
+        SpecialKeysMap.put(KeyEvent.KEYCODE_F12, ++i);          // 21
     }
 
     public void setDeviceId(String id) {
@@ -91,9 +73,7 @@ public class KeyListenerView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        if (android.os.Build.VERSION.SDK_INT >= 11) {
-            outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN;
-        }
+        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN;
         return new KeyInputConnection(this, true);
     }
 
@@ -109,12 +89,7 @@ public class KeyListenerView extends View {
     }
 
     private void sendKeyPressPacket(final NetworkPacket np) {
-        BackgroundService.RunCommand(getContext(), service -> {
-            Device device = service.getDevice(deviceId);
-            MousePadPlugin mousePadPlugin = device.getPlugin(MousePadPlugin.class);
-            if (mousePadPlugin == null) return;
-            mousePadPlugin.sendKeyboardPacket(np);
-        });
+        BackgroundService.RunWithPlugin(getContext(), deviceId, MousePadPlugin.class, plugin -> plugin.sendKeyboardPacket(np));
     }
 
     @Override
@@ -142,15 +117,18 @@ public class KeyListenerView extends View {
             modifier = true;
         }
 
-        if (Build.VERSION.SDK_INT >= 11) {
-            if (event.isCtrlPressed()) {
-                np.set("ctrl", true);
-                modifier = true;
-            }
+        if (event.isCtrlPressed()) {
+            np.set("ctrl", true);
+            modifier = true;
         }
 
         if (event.isShiftPressed()) {
             np.set("shift", true);
+        }
+
+        if (event.isMetaPressed()) {
+            np.set("super", true);
+            modifier = true;
         }
 
         int specialKey = SpecialKeysMap.get(keyCode, -1);

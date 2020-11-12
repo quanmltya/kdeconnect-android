@@ -2,17 +2,16 @@ package org.kde.kdeconnect.Plugins.RunCommandPlugin;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
-import android.support.annotation.RequiresApi;
 import android.view.View;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
 import org.kde.kdeconnect_tp.R;
 
+import java.util.ArrayList;
 
-@RequiresApi( api = Build.VERSION_CODES.ICE_CREAM_SANDWICH )
-public class RunCommandWidgetDataProvider implements RemoteViewsService.RemoteViewsFactory {
+
+class RunCommandWidgetDataProvider implements RemoteViewsService.RemoteViewsFactory {
 
     private final Context mContext;
 
@@ -77,10 +76,15 @@ public class RunCommandWidgetDataProvider implements RemoteViewsService.RemoteVi
 
     @Override
     public long getItemId(int i) {
-        if (RunCommandWidget.getCurrentDevice() != null)
-            return RunCommandWidget.getCurrentDevice().getPlugin(RunCommandPlugin.class).getCommandItems().get(i).getKey().hashCode();
-
-        return 0;
+        int id = 0;
+        if (RunCommandWidget.getCurrentDevice() != null) {
+            RunCommandPlugin plugin = RunCommandWidget.getCurrentDevice().getPlugin(RunCommandPlugin.class);
+            if (plugin != null) {
+                ArrayList<CommandEntry> items = plugin.getCommandItems();
+                id = items.get(i).getKey().hashCode();
+            }
+        }
+        return id;
     }
 
     @Override

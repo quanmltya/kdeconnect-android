@@ -2,23 +2,9 @@
  * ContactsPlugin.java - This file is part of KDE Connect's Android App
  * Implement a way to request and send contact information
  *
- * Copyright 2018 Simon Redman <simon@ergotech.com>
+ * SPDX-FileCopyrightText: 2018 Simon Redman <simon@ergotech.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
  */
 
 package org.kde.kdeconnect.Plugins.ContactsPlugin;
@@ -26,14 +12,15 @@ package org.kde.kdeconnect.Plugins.ContactsPlugin;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.os.Build;
-import android.provider.ContactsContract;
 import android.util.Log;
 
 import org.kde.kdeconnect.Helpers.ContactsHelper;
 import org.kde.kdeconnect.Helpers.ContactsHelper.VCardBuilder;
 import org.kde.kdeconnect.Helpers.ContactsHelper.uID;
+import org.kde.kdeconnect.Helpers.ContactsHelper.ContactNotFoundException;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
 import org.kde.kdeconnect_tp.R;
 
 import java.util.ArrayList;
@@ -43,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
+@PluginFactory.LoadablePlugin
 public class ContactsPlugin extends Plugin {
 
     /**
@@ -72,10 +60,11 @@ public class ContactsPlugin extends Plugin {
      * then, for each UID, there shall be a field with the key of that UID and the value of the name of the contact
      * <p>
      * For example:
-     * ( 'uids' : ['1', '3', '15'],
-     * '1'  : 'John Smith',
-     * '3'  : 'Abe Lincoln',
-     * '15' : 'Mom' )
+     * { 'uids' : ['1', '3', '15'],
+     *   '1'  : 'John Smith',
+     *   '3'  : 'Abe Lincoln',
+     *   '15' : 'Mom'
+     * }
      */
     private static final String PACKET_TYPE_CONTACTS_RESPONSE_VCARDS = "kdeconnect.contacts.response_vcards";
 
@@ -138,9 +127,10 @@ public class ContactsPlugin extends Plugin {
      *
      * @param vcard vcard to apply metadata to
      * @param uID   uID to which the vcard corresponds
+     * @throws ContactNotFoundException If the given ID for some reason does not match a contact
      * @return The same VCard as was passed in, but now with KDE Connect-specific fields
      */
-    protected VCardBuilder addVCardMetadata(VCardBuilder vcard, uID uID) {
+    private VCardBuilder addVCardMetadata(VCardBuilder vcard, uID uID) throws ContactNotFoundException {
         // Append the device ID line
         // Unclear if the deviceID forms a valid name per the vcard spec. Worry about that later..
         vcard.appendLine("X-KDECONNECT-ID-DEV-" + device.getDeviceId(),
@@ -148,16 +138,9 @@ public class ContactsPlugin extends Plugin {
 
         // Build the timestamp line
         // Maybe one day this should be changed into the vcard-standard REV key
-        List<uID> uIDs = new ArrayList<>();
-        uIDs.add(uID);
-
-        final String[] contactsProjection = new String[]{
-                ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP
-        };
-
-        Map<uID, Map<String, Object>> timestamp = ContactsHelper.getColumnsFromContactsForIDs(context, uIDs, contactsProjection);
+        Long timestamp = ContactsHelper.getContactTimestamp(context, uID);
         vcard.appendLine("X-KDECONNECT-TIMESTAMP",
-                timestamp.get(uID).get(ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP).toString());
+                timestamp.toString());
 
         return vcard;
     }
@@ -172,36 +155,29 @@ public class ContactsPlugin extends Plugin {
      * @return true if successfully handled, false otherwise
      */
     @SuppressWarnings("SameReturnValue")
-    protected boolean handleRequestAllUIDsTimestamps(@SuppressWarnings("unused") NetworkPacket np) {
+    private boolean handleRequestAllUIDsTimestamps(@SuppressWarnings("unused") NetworkPacket np) {
         NetworkPacket reply = new NetworkPacket(PACKET_TYPE_CONTACTS_RESPONSE_UIDS_TIMESTAMPS);
 
-        List<uID> uIDs = ContactsHelper.getAllContactContactIDs(context);
+        Map<uID, Long> uIDsToTimestamps = ContactsHelper.getAllContactTimestamps(context);
 
-        List<String> uIDsAsStrings = new ArrayList<>(uIDs.size());
+        int contactCount = uIDsToTimestamps.size();
 
-        for (uID uID : uIDs) {
-            uIDsAsStrings.add(uID.toString());
+        List<String> uIDs = new ArrayList<>(contactCount);
+
+        for (uID contactID : uIDsToTimestamps.keySet()) {
+            Long timestamp = uIDsToTimestamps.get(contactID);
+            reply.set(contactID.toString(), timestamp);
+            uIDs.add(contactID.toString());
         }
 
-        final String[] contactsProjection = new String[]{
-                ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP
-        };
-
-        reply.set("uids", uIDsAsStrings);
-
-        // Add last-modified timestamps
-        Map<uID, Map<String, Object>> uIDsToTimestamps = ContactsHelper.getColumnsFromContactsForIDs(context, uIDs, contactsProjection);
-        for (uID ID : uIDsToTimestamps.keySet()) {
-            Map<String, Object> data = uIDsToTimestamps.get(ID);
-            reply.set(ID.toString(), (Integer) data.get(ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP));
-        }
+        reply.set("uids", uIDs);
 
         device.sendPacket(reply);
 
         return true;
     }
 
-    protected boolean handleRequestVCardsByUIDs(NetworkPacket np) {
+    private boolean handleRequestVCardsByUIDs(NetworkPacket np) {
         if (!np.has("uids")) {
             Log.e("ContactsPlugin", "handleRequestNamesByUIDs received a malformed packet with no uids key");
             return false;
@@ -227,12 +203,17 @@ public class ContactsPlugin extends Plugin {
         for (uID uID : uIDsToVCards.keySet()) {
             VCardBuilder vcard = uIDsToVCards.get(uID);
 
-            vcard = this.addVCardMetadata(vcard, uID);
+            try {
+                vcard = this.addVCardMetadata(vcard, uID);
 
-            // Store this as a valid uID
-            uIDsAsStrings.add(uID.toString());
-            // Add the uid -> vcard pairing to the packet
-            reply.set(uID.toString(), vcard.toString());
+                // Store this as a valid uID
+                uIDsAsStrings.add(uID.toString());
+                // Add the uid -> vcard pairing to the packet
+                reply.set(uID.toString(), vcard.toString());
+
+            } catch (ContactsHelper.ContactNotFoundException e) {
+                e.printStackTrace();
+            }
         }
 
         // Add the valid uIDs to the packet

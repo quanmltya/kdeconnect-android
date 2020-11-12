@@ -1,15 +1,21 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
+  <string name="kde_connect">KDE Connect</string>
+  <string name="foreground_notification_no_devices">Not connected to any device</string>
+  <string name="foreground_notification_devices">Connected to: %s</string>
+  <string name="foreground_notification_send_clipboard">Send Clipboard</string>
   <string name="pref_plugin_telephony">Telephony notifier</string>
+  <string name="pref_plugin_telephony_desc">Send notifications for incoming calls</string>
   <string name="pref_plugin_battery">Battery report</string>
   <string name="pref_plugin_battery_desc">Periodically report battery status</string>
   <string name="pref_plugin_sftp">Filesystem expose</string>
   <string name="pref_plugin_sftp_desc">Allows to browse this device\'s filesystem remotely</string>
   <string name="pref_plugin_clipboard">Clipboard sync</string>
   <string name="pref_plugin_clipboard_desc">Share the clipboard content</string>
+  <string name="pref_plugin_clipboard_sent">Clipboard Sent</string>
   <string name="pref_plugin_mousepad">Remote input</string>
   <string name="pref_plugin_mousepad_desc">Use your phone or tablet as a touchpad and keyboard</string>
-  <string name="pref_plugin_presenter">Presentation remote</string>
+  <string name="pref_plugin_presenter">Slideshow remote</string>
   <string name="pref_plugin_presenter_desc">Use your device to change slides in a presentation</string>
   <string name="pref_plugin_remotekeyboard">Receive remote keypresses</string>
   <string name="pref_plugin_remotekeyboard_desc">Receive keypress events from remote devices</string>
@@ -27,13 +33,14 @@
   <string name="pref_plugin_receive_notifications_desc">Receive notifications from the other device and display them on Android</string>
   <string name="pref_plugin_sharereceiver">Share and receive</string>
   <string name="pref_plugin_sharereceiver_desc">Share files and URLs between devices</string>
-  <string name="plugin_not_available">This feature is not available in your Android version</string>
   <string name="device_list_empty">No devices</string>
   <string name="ok">OK</string>
+  <string name="sad_ok">OK :(</string>
   <string name="cancel">Cancel</string>
   <string name="open_settings">Open settings</string>
   <string name="no_permissions">You need to grant permission to access notifications</string>
   <string name="no_permission_mprisreceiver">To be able to control your media players you need to grant access to the notifications</string>
+  <string name="no_permissions_remotekeyboard">To receive keypresses you need to activate the KDE Connect Remote Keyboard</string>
   <string name="send_ping">Send ping</string>
   <string name="open_mpris_controls">Multimedia control</string>
   <string name="remotekeyboard_editing_only_title">Handle remote keys only when editing</string>
@@ -70,45 +77,58 @@
   <string name="category_connected_devices">Connected devices</string>
   <string name="category_not_paired_devices">Available devices</string>
   <string name="category_remembered_devices">Remembered devices</string>
-  <string name="plugins_failed_to_load">Plugins failed to load (tap for more info):</string>
   <string name="device_menu_plugins">Plugin settings</string>
   <string name="device_menu_unpair">Unpair</string>
-  <string name="device_not_reachable">Paired device not reachable</string>
   <string name="pair_new_device">Pair new device</string>
   <string name="unknown_device">Unknown device</string>
   <string name="error_not_reachable">Device not reachable</string>
-  <string name="error_already_requested">Pairing already requested</string>
   <string name="error_already_paired">Device already paired</string>
   <string name="error_could_not_send_package">Could not send package</string>
   <string name="error_timed_out">Timed out</string>
   <string name="error_canceled_by_user">Cancelled by user</string>
   <string name="error_canceled_by_other_peer">Cancelled by other peer</string>
-  <string name="error_invalid_key">Invalid key received</string>
   <string name="encryption_info_title">Encryption Info</string>
   <string name="encryption_info_msg_no_ssl">The other device doesn\'t use a recent version of KDE Connect, using the legacy encryption method.</string>
   <string name="my_device_fingerprint">SHA1 fingerprint of your device certificate is:</string>
   <string name="remote_device_fingerprint">SHA1 fingerprint of remote device certificate is:</string>
   <string name="pair_requested">Pair requested</string>
   <string name="pairing_request_from">Pairing request from %1s</string>
-  <string name="received_url_title">Received link from %1s</string>
-  <string name="received_url_text">Tap to open \'%1s\'</string>
-  <string name="incoming_file_title">Incoming file from %1s</string>
-  <string name="incoming_file_text">%1s</string>
-  <string name="outgoing_file_title">Sending file to %1s</string>
-  <string name="outgoing_files_title">Sending files to %1s</string>
-  <plurals name="outgoing_files_text">
-    <item quantity="one">Send files</item>
-    <item quantity="other">Sent %1$d out of %2$d files</item>
+  <plurals name="incoming_file_title">
+    <item quantity="one">Receiving %1$d file from %2$s</item>
+    <item quantity="other">Receiving %1$d files from %2$s</item>
   </plurals>
-  <string name="received_file_title">Received file from %1s</string>
-  <string name="received_file_fail_title">Failed receiving file from %1s</string>
+  <plurals name="incoming_files_text">
+    <item quantity="one">File: %1s</item>
+    <item quantity="other">(File %2$d of %3$d) : %1$s</item>
+  </plurals>
+  <plurals name="outgoing_file_title">
+    <item quantity="one">Sending %1$d file to %2$s</item>
+    <item quantity="other">Sending %1$d files to %2$s</item>
+  </plurals>
+  <plurals name="outgoing_files_text">
+    <item quantity="one">File: %1$s</item>
+    <item quantity="other">(File %2$d of %3$d) : %1$s</item>
+  </plurals>
+  <plurals name="received_files_title">
+    <item quantity="one">Received file from %1$s</item>
+    <item quantity="other">Received %2$d files from %1$s</item>
+  </plurals>
+  <plurals name="received_files_fail_title">
+    <item quantity="one">Failed receiving file from %1$s</item>
+    <item quantity="other">Failed receiving %2$d of %3$d files from %1$s</item>
+  </plurals>
+  <plurals name="sent_files_title">
+    <item quantity="one">Sent file to %1$s</item>
+    <item quantity="other">Sent %2$d files to %1$s</item>
+  </plurals>
+  <plurals name="send_files_fail_title">
+    <item quantity="one">Failed sending file to %1$s</item>
+    <item quantity="other">Failed sending %2$d of %3$d files to %1$s</item>
+  </plurals>
+  <string name="tap_to_open">Tap to open</string>
   <string name="received_file_text">Tap to open \'%1s\'</string>
-  <string name="sent_file_title">Sent file to %1s</string>
-  <string name="sent_file_text">%1s</string>
-  <string name="sent_file_failed_title">Failed to send file to %1s</string>
-  <string name="sent_file_failed_text">%1s</string>
+  <string name="cannot_create_file">Cannot create file %s</string>
   <string name="tap_to_answer">Tap to answer</string>
-  <string name="reconnect">Reconnect</string>
   <string name="right_click">Send Right Click</string>
   <string name="middle_click">Send Middle Click</string>
   <string name="show_keyboard">Show Keyboard</string>
@@ -116,10 +136,7 @@
   <string name="request_pairing">Request pairing</string>
   <string name="pairing_accept">Accept</string>
   <string name="pairing_reject">Reject</string>
-  <string name="device">Device</string>
-  <string name="pair_device">Pair device</string>
-  <string name="remote_control">Remote control</string>
-  <string name="settings">KDE Connect Settings</string>
+  <string name="settings">Settings</string>
   <string name="mpris_play">Play</string>
   <string name="mpris_pause">Pause</string>
   <string name="mpris_previous">Previous</string>
@@ -127,8 +144,8 @@
   <string name="mpris_ff">Fast-forward</string>
   <string name="mpris_next">Next</string>
   <string name="mpris_volume">Volume</string>
-  <string name="mpris_settings">Multimedia Settings</string>
   <string name="mpris_time_settings_title">Forward/rewind buttons</string>
+  <string name="mpris_time_settings_summary">Adjust the time to fast forward/rewind when pressed</string>
   <string-array name="mpris_time_entries">
     <item>10 seconds</item>
     <item>20 seconds</item>
@@ -137,20 +154,18 @@
     <item>2 minutes</item>
   </string-array>
   <string name="mpris_notification_settings_title">Show media control notification</string>
-  <string name="share_to">Share To...</string>
-  <string name="protocol_version_older">This device uses an old protocol version</string>
+  <string name="mpris_notification_settings_summary">Allow controlling your media players without opening KDE Connect</string>
+  <string name="share_to">Share To…</string>
   <string name="protocol_version_newer">This device uses a newer protocol version</string>
-  <string name="general_settings">General Settings</string>
-  <string name="plugin_settings">Settings</string>
   <string name="plugin_settings_with_name">%s settings</string>
-  <string name="device_name">Device name</string>
-  <string name="device_name_preference_summary">%s</string>
   <string name="invalid_device_name">Invalid device name</string>
   <string name="shareplugin_text_saved">Received text, saved to clipboard</string>
   <string name="custom_devices_settings">Custom device list</string>
-  <string name="pair_device_action">Pair a new device</string>
-  <string name="unpair_device_action">Unpair %s</string>
   <string name="custom_device_list">Add devices by IP</string>
+  <string name="custom_device_deleted">Custom device deleted</string>
+  <string name="custom_device_list_help">If your device is not automatically detected you can add its IP address or hostname by clicking on the Floating Action Button</string>
+  <string name="custom_device_fab_hint">Add a device</string>
+  <string name="undo">Undo</string>
   <string name="share_notification_preference">Noisy notifications</string>
   <string name="share_notification_preference_summary">Vibrate and play a sound when receiving a file</string>
   <string name="share_destination_customize">Customise destination directory</string>
@@ -161,46 +176,59 @@
   <string name="share_received_file">Share \"%s\"</string>
   <string name="title_activity_notification_filter">Notification filter</string>
   <string name="filter_apps_info">Notifications will be synchronised for the selected apps.</string>
-  <string name="sftp_internal_storage">Internal storage</string>
-  <string name="sftp_all_files">All files</string>
   <string name="sftp_sdcard_num">SD card %d</string>
   <string name="sftp_sdcard">SD card</string>
   <string name="sftp_readonly">(read only)</string>
   <string name="sftp_camera">Camera pictures</string>
-  <string name="add_host">Add host/IP</string>
-  <string name="add_host_hint">Hostname or IP</string>
+  <string name="add_device_dialog_title">Add device</string>
+  <string name="add_device_hint">Hostname or IP address</string>
+  <string name="sftp_preference_detected_sdcards">Detected SD cards</string>
+  <string name="sftp_preference_edit_sdcard_title">Edit SD card</string>
+  <string name="sftp_preference_configured_storage_locations">Configured storage locations</string>
+  <string name="sftp_preference_add_storage_location_title">Add storage location</string>
+  <string name="sftp_preference_edit_storage_location">Edit storage location</string>
+  <string name="sftp_preference_add_camera_shortcut">Add camera folder shortcut</string>
+  <string name="sftp_preference_add_camera_shortcut_summary_on">Add a shortcut to the camera folder</string>
+  <string name="sftp_preference_add_camera_shortcut_summary_off">Do not add a shortcut to the camera folder</string>
+  <string name="sftp_storage_preference_storage_location">Storage location</string>
+  <string name="sftp_storage_preference_storage_location_already_configured">This location has already been configured</string>
+  <string name="sftp_storage_preference_click_to_select">click to select</string>
+  <string name="sftp_storage_preference_display_name">Display name</string>
+  <string name="sftp_storage_preference_display_name_already_used">This display name is already used</string>
+  <string name="sftp_storage_preference_display_name_cannot_be_empty">Display name cannot be empty</string>
+  <string name="sftp_action_mode_menu_delete">Delete</string>
+  <string name="sftp_no_sdcard_detected">No SD card detected</string>
+  <string name="sftp_no_storage_locations_configured">No storage locations configured</string>
+  <string name="sftp_saf_permission_explanation">To access files remotely you have to configure storage locations</string>
   <string name="no_players_connected">No players found</string>
-  <string name="custom_dev_list_help">Use this option only if your device is not automatically detected. Enter IP address or hostname below and touch the button to add it to the list. Touch an existing item to remove it from the list.</string>
-  <string name="mpris_player_on_device">%1$s on %2$s</string>
   <string name="send_files">Send files</string>
   <string name="pairing_title">KDE Connect Devices</string>
   <string name="pairing_description">Other devices running KDE Connect in your same network should appear here.</string>
-  <string name="device_paired">Device paired</string>
   <string name="device_rename_title">Rename device</string>
   <string name="device_rename_confirm">Rename</string>
   <string name="refresh">Refresh</string>
   <string name="unreachable_description">This paired device is not reachable. Make sure it is connected to your same network.</string>
-  <string name="on_data_message">It looks like you are on a mobile data connection. KDE Connect only works on local networks.</string>
+  <string name="no_wifi">You\'re not connected to a Wi-Fi network, so you may not be able to see any devices. Click here to enable Wi-Fi.</string>
+  <string name="on_non_trusted_message">Not on a trusted network: autodiscovery is disabled.</string>
   <string name="no_file_browser">There are no file browsers installed.</string>
   <string name="pref_plugin_telepathy">Send SMS</string>
   <string name="pref_plugin_telepathy_desc">Send text messages from your desktop</string>
-  <string name="plugin_not_supported">This plugin is not supported by the device</string>
+  <string name="pref_plugin_telepathy_mms">Send MMS</string>
+  <string name="pref_plugin_telepathy_mms_desc">To be able to send MMS from KDE Connect you need to set it as the default SMS app.</string>
   <string name="findmyphone_title">Find my phone</string>
   <string name="findmyphone_title_tablet">Find my tablet</string>
   <string name="findmyphone_title_tv">Find my TV</string>
   <string name="findmyphone_description">Rings this device so you can find it</string>
-  <string name="findmyphone_found">Found</string>
+  <string name="findmyphone_found">Found it</string>
   <string name="open">Open</string>
   <string name="close">Close</string>
-  <string name="no_permissions_storage">You need to grant permissions to access the storage</string>
   <string name="plugins_need_permission">Some Plugins need permissions to work (tap for more info):</string>
   <string name="permission_explanation">This plugin needs permissions to work</string>
   <string name="optional_permission_explanation">You need to grant extra permissions to enable all functions</string>
   <string name="plugins_need_optional_permission">Some plugins have features disabled because of lack of permission (tap for more info):</string>
-  <string name="sftp_permission_explanation">To access your files from your PC the app needs permission to access your phone\'s storage</string>
-  <string name="share_optional_permission_explanation">To share files between your phone and your desktop you need to give access to the phone\'s storage</string>
+  <string name="share_optional_permission_explanation">To receive shared files you need to choose a destination directory</string>
   <string name="telepathy_permission_explanation">To read and write SMS from your desktop you need to give permission to SMS</string>
-  <string name="telephony_permission_explanation">To see phone calls and SMS from the desktop you need to give permission to phone calls and SMS</string>
+  <string name="telephony_permission_explanation">To see phone calls on the desktop you need to give permission to phone call logs and phone state</string>
   <string name="telephony_optional_permission_explanation">To see a contact name instead of a phone number you need to give access to the phone\'s contacts</string>
   <string name="contacts_permission_explanation">To share your contacts book with the desktop, you need to give contacts permission</string>
   <string name="select_ringtone">Select a ringtone</string>
@@ -211,14 +239,19 @@
   <string name="settings_icon_description">Settings icon</string>
   <string name="presenter_fullscreen">Full-screen</string>
   <string name="presenter_exit">Exit presentation</string>
-  <string name="presenter_lock_tip">You can lock your device to use the volume keys as previous/next buttons</string>
+  <string name="presenter_lock_tip">You can lock your device and use the volume keys to go to the previous/next slide</string>
   <string name="add_command">Add a command</string>
   <string name="addcommand_explanation">There are no commands registered</string>
   <string name="addcommand_explanation2">You can add new commands in the KDE Connect System Settings</string>
   <string name="add_command_description">You can add commands on the desktop</string>
   <string name="pref_plugin_mprisreceiver">Media Player Control</string>
-  <string name="pref_plugin_mprisreceiver_desc">Control your phones media players from another device</string>
-  <string name="dark_theme">Dark theme</string>
+  <string name="pref_plugin_mprisreceiver_desc">Control your phone\'s media players from another device</string>
+  <string name="notification_channel_default">Other notifications</string>
+  <string name="notification_channel_persistent">Persistent indicator</string>
+  <string name="notification_channel_media_control">Media control</string>
+  <string name="notification_channel_filetransfer">File transfer</string>
+  <string name="notification_channel_high_priority">High priority</string>
+  <string name="notification_channel_sms_mms">New Message</string>
   <string name="mpris_stop">Stop the current player</string>
   <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
   <string name="clipboard_toast">Copied to clipboard</string>
@@ -232,4 +265,70 @@
   <string name="pref_plugin_systemvolume">System volume</string>
   <string name="pref_plugin_systemvolume_desc">Control the system volume of the remote device</string>
   <string name="mute">Mute</string>
+  <string name="all">All</string>
+  <string name="devices">Devices</string>
+  <string name="settings_rename">Device name</string>
+  <string name="settings_dark_mode">Dark theme</string>
+  <string name="settings_more_settings_title">More settings</string>
+  <string name="settings_more_settings_text">Per-device settings can be found under \'Plugin settings\' from within a device.</string>
+  <string name="setting_persistent_notification">Show persistent notification</string>
+  <string name="setting_persistent_notification_oreo">Persistent notification</string>
+  <string name="setting_persistent_notification_description">Tap to enable/disable in Notification settings</string>
+  <string name="extra_options">Extra options</string>
+  <string name="privacy_options">Privacy options</string>
+  <string name="set_privacy_options">Set your privacy options</string>
+  <string name="block_contents">Block contents of notifications</string>
+  <string name="block_images">Block images in notifications</string>
+  <string name="notification_channel_receivenotification">Notifications from other devices</string>
+  <string name="take_picture">Launch camera</string>
+  <string name="plugin_photo_desc">Launch the camera app to ease taking and transferring pictures</string>
+  <string name="no_app_for_opening">No suitable app found to open this file</string>
+  <string name="remote_keyboard_service">KDE Connect Remote Keyboard</string>
+  <string name="presenter_pointer">Pointer</string>
+  <string name="trusted_networks">Trusted networks</string>
+  <string name="trusted_networks_desc">Restrict autodiscovery to known networks</string>
+  <string name="add_trusted_network">Add %1s</string>
+  <string name="empty_trusted_networks_list_text">You have not added any trusted network yet</string>
+  <string name="allow_all_networks_text">Allow all</string>
+  <string name="location_permission_needed_title">Permission required</string>
+  <string name="location_permission_needed_desc">Android requires the Location permission to identify your WiFi network</string>
+  <string name="clipboard_android_x_incompat">Android 10 has removed clipboard access to all apps. This plugin will be disabled.</string>
+  <string name="mpris_open_url">Continue playing here</string>
+  <string name="cant_open_url">Cannot open URL to continue playing</string>
+  <string name="bigscreen_home">Home</string>
+  <string name="bigscreen_up">Up</string>
+  <string name="bigscreen_left">Left</string>
+  <string name="bigscreen_select">Select</string>
+  <string name="bigscreen_right">Right</string>
+  <string name="bigscreen_down">Down</string>
+  <string name="bigscreen_mic">Mic</string>
+  <string name="pref_plugin_bigscreen">Bigscreen remote</string>
+  <string name="pref_plugin_bigscreen_desc">Use your device as a remote for Plasma Bigscreen</string>
+  <string name="bigscreen_optional_permission_explanation">To share microphone input from your phone you need to give access to the phone\'s audio input</string>
+  <string name="bigscreen_speech_extra_prompt">Speech</string>
+  <string name="message_reply_label">REPLY</string>
+  <string name="mark_as_read_label">MARK AS READ</string>
+  <string name="user_display_name">You</string>
+  <string name="set_default_sms_app_title">Send MMS</string>
+  <string name="set_group_message_as_mms_title">Send group MMS</string>
+  <string name="set_long_text_as_mms_title">Send long text as MMS</string>
+  <string name="convert_to_mms_after_title">Convert to MMS</string>
+  <string-array name="convert_to_mms_after_entries">
+    <item>After one message</item>
+    <item>After two messages</item>
+    <item>After three messages</item>
+    <item>After four messages</item>
+    <item>After five messages</item>
+  </string-array>
+  <string name="theme_dialog_title">Choose theme</string>
+  <string-array name="theme_list">
+    <item>Set by Battery Saver</item>
+    <item>Light</item>
+    <item>Dark</item>
+  </string-array>
+  <string-array name="theme_list_v28">
+    <item>System Default</item>
+    <item>Light</item>
+    <item>Dark</item>
+  </string-array>
 </resources>

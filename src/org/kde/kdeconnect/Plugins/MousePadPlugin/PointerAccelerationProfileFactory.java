@@ -39,19 +39,20 @@ public class PointerAccelerationProfileFactory {
         // Higher values will reduce the amount of noise in the speed calculation
         // but will also increase latency until the acceleration kicks in.
         // 150ms seemed like a nice middle ground.
-        long freshThreshold = 150;
+        final long freshThreshold = 150;
 
         private static class TouchDeltaEvent {
-            float x, y;
-            long time;
-            public TouchDeltaEvent(float x, float y, long t) {
+            final float x;
+            final float y;
+            final long time;
+            TouchDeltaEvent(float x, float y, long t) {
                 this.x = x;
                 this.y = y;
                 this.time = t;
             }
         }
 
-        private TouchDeltaEvent[] touchEventHistory = new TouchDeltaEvent[32];
+        private final TouchDeltaEvent[] touchEventHistory = new TouchDeltaEvent[32];
 
         /* add an event to the touchEventHistory array, shifting everything else in the array. */
         private void addHistory(float deltaX, float deltaY, long eventTime) {
@@ -124,9 +125,9 @@ public class PointerAccelerationProfileFactory {
     /* Pointer acceleration with mouse_delta = touch_delta * ( touch_speed ^ exponent )
      * It is similar to x.org server's Polynomial pointer acceleration profile. */
     private static class PolynomialProfile extends SpeedBasedAccelerationProfile {
-        float exponent;
+        final float exponent;
 
-        public PolynomialProfile(float exponent) {
+        PolynomialProfile(float exponent) {
             this.exponent = exponent;
         }
 

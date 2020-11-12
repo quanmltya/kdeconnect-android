@@ -1,21 +1,7 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect.Plugins.MprisPlugin;
@@ -26,11 +12,13 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
+
+import androidx.core.content.ContextCompat;
 
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
 import org.kde.kdeconnect_tp.R;
 
 import java.net.MalformedURLException;
@@ -40,7 +28,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
+@PluginFactory.LoadablePlugin
 public class MprisPlugin extends Plugin {
     public class MprisPlayer {
         private String player = "";
@@ -50,6 +40,7 @@ public class MprisPlugin extends Plugin {
         private String artist = "";
         private String album = "";
         private String albumArtUrl = "";
+        private String url = "";
         private int volume = 50;
         private long length = -1;
         private long lastPosition = 0;
@@ -60,7 +51,7 @@ public class MprisPlugin extends Plugin {
         private boolean goPreviousAllowed = true;
         private boolean seekAllowed = true;
 
-        public MprisPlayer() {
+        MprisPlayer() {
             lastPositionTime = System.currentTimeMillis();
         }
 
@@ -84,7 +75,7 @@ public class MprisPlugin extends Plugin {
             return player;
         }
 
-        private boolean isSpotify() {
+        boolean isSpotify() {
             return getPlayer().toLowerCase().equals("spotify");
         }
 
@@ -131,6 +122,11 @@ public class MprisPlugin extends Plugin {
          */
         public Bitmap getAlbumArt() {
             return AlbumArtCache.getAlbumArt(albumArtUrl, MprisPlugin.this, player);
+        }
+
+        //@NonNull
+        public String getUrl() {
+            return url;
         }
 
         public boolean isSetVolumeAllowed() {
@@ -201,14 +197,13 @@ public class MprisPlugin extends Plugin {
         }
     }
 
-    public final static String PACKET_TYPE_MPRIS = "kdeconnect.mpris";
-    public final static String PACKET_TYPE_MPRIS_REQUEST = "kdeconnect.mpris.request";
+    private final static String PACKET_TYPE_MPRIS = "kdeconnect.mpris";
+    private final static String PACKET_TYPE_MPRIS_REQUEST = "kdeconnect.mpris.request";
 
-    private HashMap<String, MprisPlayer> players = new HashMap<>();
+    private final ConcurrentHashMap<String, MprisPlayer> players = new ConcurrentHashMap<>();
     private boolean supportAlbumArtPayload = false;
-    private HashMap<String, Handler> playerStatusUpdated = new HashMap<>();
-
-    private HashMap<String, Handler> playerListUpdated = new HashMap<>();
+    private final HashMap<String, Handler> playerStatusUpdated = new HashMap<>();
+    private final HashMap<String, Handler> playerListUpdated = new HashMap<>();
 
     @Override
     public String getDisplayName() {
@@ -222,7 +217,7 @@ public class MprisPlugin extends Plugin {
 
     @Override
     public Drawable getIcon() {
-        return ContextCompat.getDrawable(context, R.drawable.mpris_plugin_action);
+        return ContextCompat.getDrawable(context, R.drawable.mpris_plugin_action_24dp);
     }
 
     @Override
@@ -279,6 +274,7 @@ public class MprisPlugin extends Plugin {
                 playerStatus.title = np.getString("title", playerStatus.title);
                 playerStatus.artist = np.getString("artist", playerStatus.artist);
                 playerStatus.album = np.getString("album", playerStatus.album);
+                playerStatus.url = np.getString("url", playerStatus.url);
                 playerStatus.volume = np.getInt("volume", playerStatus.volume);
                 playerStatus.length = np.getLong("length", playerStatus.length);
                 if (np.has("pos")) {
@@ -297,14 +293,14 @@ public class MprisPlugin extends Plugin {
                     URL newAlbumArtUrl = new URL(newAlbumArtUrlstring);
                     playerStatus.albumArtUrl = newAlbumArtUrl.toString();
                 } catch (MalformedURLException ignored) {
+                    playerStatus.albumArtUrl = "";
                 }
 
                 for (String key : playerStatusUpdated.keySet()) {
                     try {
                         playerStatusUpdated.get(key).dispatchMessage(new Message());
                     } catch (Exception e) {
-                        e.printStackTrace();
-                        Log.e("MprisControl", "Exception");
+                        Log.e("MprisControl", "Exception", e);
                         playerStatusUpdated.remove(key);
                     }
                 }
@@ -332,14 +328,8 @@ public class MprisPlugin extends Plugin {
             Iterator<HashMap.Entry<String, MprisPlayer>> iter = players.entrySet().iterator();
             while (iter.hasNext()) {
                 String oldPlayer = iter.next().getKey();
-
-                boolean found = false;
-                for (String newPlayer : newPlayerList) {
-                    if (newPlayer.equals(oldPlayer)) {
-                        found = true;
-                        break;
-                    }
-                }
+                final boolean found = newPlayerList.stream().anyMatch(newPlayer ->
+                        newPlayer.equals(oldPlayer));
 
                 if (!found) {
                     iter.remove();
@@ -351,8 +341,7 @@ public class MprisPlugin extends Plugin {
                     try {
                         playerListUpdated.get(key).dispatchMessage(new Message());
                     } catch (Exception e) {
-                        e.printStackTrace();
-                        Log.e("MprisControl", "Exception");
+                        Log.e("MprisControl", "Exception", e);
                         playerListUpdated.remove(key);
                     }
                 }
@@ -399,6 +388,9 @@ public class MprisPlugin extends Plugin {
     }
 
     public MprisPlayer getPlayerStatus(String player) {
+        if (player == null) {
+            return null;
+        }
         return players.get(player);
     }
 
@@ -412,12 +404,14 @@ public class MprisPlugin extends Plugin {
      * @return null if no players are playing, a playing player otherwise
      */
     public MprisPlayer getPlayingPlayer() {
-        for (MprisPlayer player : players.values()) {
-            if (player.isPlaying()) {
-                return player;
-            }
+        return players.values().stream().filter(MprisPlayer::isPlaying).findFirst().orElse(null);
+    }
+
+    boolean hasPlayer(MprisPlayer player) {
+        if (player == null) {
+            return false;
         }
-        return null;
+        return players.containsValue(player);
     }
 
     private void requestPlayerList() {
@@ -452,20 +446,12 @@ public class MprisPlugin extends Plugin {
     }
 
     public void fetchedAlbumArt(String url) {
-        boolean doEmitUpdate = false;
-        for (MprisPlayer player : players.values()) {
-            if (url.equals(player.albumArtUrl)) {
-                doEmitUpdate = true;
-            }
-        }
-
-        if (doEmitUpdate) {
+        if (players.values().stream().anyMatch(player -> url.equals(player.albumArtUrl))) {
             for (String key : playerStatusUpdated.keySet()) {
                 try {
                     playerStatusUpdated.get(key).dispatchMessage(new Message());
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.e("MprisControl", "Exception");
+                    Log.e("MprisControl", "Exception", e);
                     playerStatusUpdated.remove(key);
                 }
             }

@@ -1,21 +1,7 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
  */
 
 package org.kde.kdeconnect.Plugins.TelephonyPlugin;
@@ -30,32 +16,37 @@ import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
-import android.support.v4.content.ContextCompat;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.kde.kdeconnect.Helpers.ContactsHelper;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
 import org.kde.kdeconnect_tp.R;
 
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import androidx.core.content.ContextCompat;
+
+@PluginFactory.LoadablePlugin
 public class TelephonyPlugin extends Plugin {
 
 
     /**
-     * Packet used for simple telephony events
+     * Packet used for simple call events
      * <p>
      * It contains the key "event" which maps to a string indicating the type of event:
      * - "ringing" - A phone call is incoming
      * - "missedCall" - An incoming call was not answered
      * - "sms" - An incoming SMS message
      * - Note: As of this writing (15 May 2018) the SMS interface is being improved and this type of event
-     * is no longer the preferred way of handling SMS. Use the packets defined by the SMS plugin instead.
+     *   is no longer the preferred way of handling SMS. Use the packets defined by the SMS plugin instead.
      * <p>
      * Depending on the event, other fields may be defined
      */
@@ -64,8 +55,9 @@ public class TelephonyPlugin extends Plugin {
     /**
      * Old-style packet sent to request a simple telephony action
      * <p>
-     * The two possible events used the be to request a message be sent or request the device
-     * silence its ringer
+     * The events handled were:
+     * - to request the device to mute its ringer
+     * - to request an SMS to be sent.
      * <p>
      * In case an SMS was being requested, the body was like so:
      * { "sendSms": true,
@@ -75,9 +67,6 @@ public class TelephonyPlugin extends Plugin {
      * <p>
      * In case a ringer muted was requested, the body looked like so:
      * { "action": "mute" }
-     * <p>
-     * As of 15 May 2018, the SMS interface is being improved. Use the packets defined by the
-     * SMS plugin instead for SMS events
      * <p>
      * Ringer mute requests are best handled by PACKET_TYPE_TELEPHONY_REQUEST_MUTE
      * <p>
@@ -117,15 +106,14 @@ public class TelephonyPlugin extends Plugin {
                 else if (state.equals(TelephonyManager.EXTRA_STATE_OFFHOOK))
                     intState = TelephonyManager.CALL_STATE_OFFHOOK;
 
-                String number = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
-                if (number == null)
-                    number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER);
+                // We will get a second broadcast with the phone number https://developer.android.com/reference/android/telephony/TelephonyManager#ACTION_PHONE_STATE_CHANGED
+                if (!intent.hasExtra(TelephonyManager.EXTRA_INCOMING_NUMBER))
+                    return;
+                String number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER);
 
-                final int finalIntState = intState;
-                final String finalNumber = number;
-
-                if (finalIntState != lastState) {
-                    callBroadcastReceived(finalIntState, finalNumber);
+                if (intState != lastState) {
+                    lastState = intState;
+                    callBroadcastReceived(intState, number);
                 }
             }
         }
@@ -164,7 +152,7 @@ public class TelephonyPlugin extends Plugin {
                 if (photoUri != null) {
                     try {
                         String base64photo = ContactsHelper.photoId64Encoded(context, photoUri);
-                        if (base64photo != null && !base64photo.isEmpty()) {
+                        if (!TextUtils.isEmpty(base64photo)) {
                             np.set("phoneThumbnail", base64photo);
                         }
                     } catch (Exception e) {
@@ -212,7 +200,7 @@ public class TelephonyPlugin extends Plugin {
                     }
 
                     //Emit a missed call notification if needed
-                    if (lastState == TelephonyManager.CALL_STATE_RINGING) {
+                    if ("ringing".equals(lastPacket.getString("event", null))) {
                         np.set("event", "missedCall");
                         np.set("phoneNumber", lastPacket.getString("phoneNumber", null));
                         np.set("contactName", lastPacket.getString("contactName", null));
@@ -223,12 +211,11 @@ public class TelephonyPlugin extends Plugin {
         }
 
         lastPacket = np;
-        lastState = state;
     }
 
     private void unmuteRinger() {
         if (isMuted) {
-            AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            AudioManager am = ContextCompat.getSystemService(context, AudioManager.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 am.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_UNMUTE, 0);
             } else {
@@ -240,7 +227,7 @@ public class TelephonyPlugin extends Plugin {
 
     private void muteRinger() {
         if (!isMuted) {
-            AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            AudioManager am = ContextCompat.getSystemService(context, AudioManager.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 am.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_MUTE, 0);
             } else {
@@ -252,9 +239,8 @@ public class TelephonyPlugin extends Plugin {
 
     @Override
     public boolean onCreate() {
-        IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
+        IntentFilter filter = new IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
         filter.setPriority(500);
-        filter.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
         context.registerReceiver(receiver, filter);
         permissionExplanation = R.string.telephony_permission_explanation;
         optionalPermissionExplanation = R.string.telephony_optional_permission_explanation;
@@ -311,12 +297,21 @@ public class TelephonyPlugin extends Plugin {
 
     @Override
     public String[] getRequiredPermissions() {
-        return new String[]{Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_SMS};
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return new String[]{
+                    Manifest.permission.READ_PHONE_STATE,
+                    Manifest.permission.READ_CALL_LOG,
+            };
+        } else {
+            return ArrayUtils.EMPTY_STRING_ARRAY;
+        }
     }
 
     @Override
     public String[] getOptionalPermissions() {
-        return new String[]{Manifest.permission.READ_CONTACTS};
+        return new String[]{
+                Manifest.permission.READ_CONTACTS,
+        };
     }
 
     @Override

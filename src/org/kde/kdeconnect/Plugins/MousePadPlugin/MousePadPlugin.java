@@ -1,38 +1,39 @@
 /*
- * Copyright 2014 Ahmed I. Khalil <ahmedibrahimkhali@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Ahmed I. Khalil <ahmedibrahimkhali@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
-*/
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+ */
 
 package org.kde.kdeconnect.Plugins.MousePadPlugin;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
-import android.support.v4.content.ContextCompat;
 
+import org.kde.kdeconnect.Device;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
 import org.kde.kdeconnect_tp.R;
 
+import androidx.core.content.ContextCompat;
+
+@PluginFactory.LoadablePlugin
 public class MousePadPlugin extends Plugin {
 
     //public final static String PACKET_TYPE_MOUSEPAD = "kdeconnect.mousepad";
     public final static String PACKET_TYPE_MOUSEPAD_REQUEST = "kdeconnect.mousepad.request";
+    private final static String PACKET_TYPE_MOUSEPAD_KEYBOARDSTATE = "kdeconnect.mousepad.keyboardstate";
+
+    private boolean keyboardEnabled = true;
+
+    @Override
+    public boolean onPacketReceived(NetworkPacket np) {
+
+        keyboardEnabled = np.getBoolean("state", true);
+
+        return true;
+    }
 
     @Override
     public String getDisplayName() {
@@ -46,7 +47,7 @@ public class MousePadPlugin extends Plugin {
 
     @Override
     public Drawable getIcon() {
-        return ContextCompat.getDrawable(context, R.drawable.touchpad_plugin_action);
+        return ContextCompat.getDrawable(context, R.drawable.touchpad_plugin_action_24dp);
     }
 
     @Override
@@ -68,7 +69,7 @@ public class MousePadPlugin extends Plugin {
 
     @Override
     public String[] getSupportedPacketTypes() {
-        return new String[0];
+        return new String[]{PACKET_TYPE_MOUSEPAD_KEYBOARDSTATE};
     }
 
     @Override
@@ -82,12 +83,18 @@ public class MousePadPlugin extends Plugin {
     }
 
     public void sendMouseDelta(float dx, float dy) {
-        NetworkPacket np = new NetworkPacket(PACKET_TYPE_MOUSEPAD_REQUEST);
+        NetworkPacket np = device.getAndRemoveUnsentPacket(NetworkPacket.PACKET_REPLACEID_MOUSEMOVE);
+        if (np == null) {
+            np = new NetworkPacket(PACKET_TYPE_MOUSEPAD_REQUEST);
+        } else {
+            dx += np.getInt("dx");
+            dy += np.getInt("dx");
+        }
 
         np.set("dx", dx);
         np.set("dy", dy);
 
-        device.sendPacket(np);
+        device.sendPacket(np, NetworkPacket.PACKET_REPLACEID_MOUSEMOVE);
     }
 
     public void sendSingleClick() {
@@ -130,6 +137,10 @@ public class MousePadPlugin extends Plugin {
 
     public void sendKeyboardPacket(NetworkPacket np) {
         device.sendPacket(np);
+    }
+
+    boolean isKeyboardEnabled() {
+        return keyboardEnabled;
     }
 
 }

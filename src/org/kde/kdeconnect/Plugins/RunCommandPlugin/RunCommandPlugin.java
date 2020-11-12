@@ -1,22 +1,8 @@
 /*
- * Copyright 2015 Aleix Pol Gonzalez <aleixpol@kde.org>
- * Copyright 2015 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2015 Aleix Pol Gonzalez <aleixpol@kde.org>
+ * SPDX-FileCopyrightText: 2015 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect.Plugins.RunCommandPlugin;
@@ -24,25 +10,30 @@ package org.kde.kdeconnect.Plugins.RunCommandPlugin;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
-import android.support.v4.content.ContextCompat;
+import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
 import org.kde.kdeconnect_tp.R;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 
+import androidx.core.content.ContextCompat;
+
+@PluginFactory.LoadablePlugin
 public class RunCommandPlugin extends Plugin {
 
-    public final static String PACKET_TYPE_RUNCOMMAND = "kdeconnect.runcommand";
-    public final static String PACKET_TYPE_RUNCOMMAND_REQUEST = "kdeconnect.runcommand.request";
+    private final static String PACKET_TYPE_RUNCOMMAND = "kdeconnect.runcommand";
+    private final static String PACKET_TYPE_RUNCOMMAND_REQUEST = "kdeconnect.runcommand.request";
 
-    private ArrayList<JSONObject> commandList = new ArrayList<>();
-    private ArrayList<CommandsChangedCallback> callbacks = new ArrayList<>();
+    private final ArrayList<JSONObject> commandList = new ArrayList<>();
+    private final ArrayList<CommandsChangedCallback> callbacks = new ArrayList<>();
     private final ArrayList<CommandEntry> commandItems = new ArrayList<>();
 
     private boolean canAddCommand;
@@ -79,7 +70,7 @@ public class RunCommandPlugin extends Plugin {
 
     @Override
     public Drawable getIcon() {
-        return ContextCompat.getDrawable(context, R.drawable.runcommand_plugin_icon);
+        return ContextCompat.getDrawable(context, R.drawable.run_command_plugin_icon_24dp);
     }
 
     @Override
@@ -112,17 +103,17 @@ public class RunCommandPlugin extends Plugin {
                                 )
                         );
                     } catch (JSONException e) {
-                        e.printStackTrace();
+                        Log.e("RunCommand", "Error parsing JSON", e);
                     }
                 }
 
-                Collections.sort(commandItems, (lhs, rhs) -> lhs.getName().compareTo(rhs.getName()) );
+                Collections.sort(commandItems, Comparator.comparing(CommandEntry::getName));
 
                 Intent updateWidget = new Intent(context, RunCommandWidget.class);
                 context.sendBroadcast(updateWidget);
 
             } catch (JSONException e) {
-                e.printStackTrace();
+                Log.e("RunCommand", "Error parsing JSON", e);
             }
 
             for (CommandsChangedCallback aCallback : callbacks) {

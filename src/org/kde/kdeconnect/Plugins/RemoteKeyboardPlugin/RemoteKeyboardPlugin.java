@@ -1,31 +1,16 @@
 /*
- * Copyright 2017 Holger Kaelberer <holger.k@elberer.de>
+ * SPDX-FileCopyrightText: 2017 Holger Kaelberer <holger.k@elberer.de>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
  */
 
 package org.kde.kdeconnect.Plugins.RemoteKeyboardPlugin;
 
+import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.util.Pair;
+import android.provider.Settings;
 import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.KeyEvent;
@@ -36,24 +21,32 @@ import android.view.inputmethod.InputConnection;
 
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
+import org.kde.kdeconnect.UserInterface.MainActivity;
+import org.kde.kdeconnect.UserInterface.StartActivityAlertDialogFragment;
 import org.kde.kdeconnect_tp.R;
 
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class RemoteKeyboardPlugin extends Plugin {
+import androidx.core.content.ContextCompat;
+import androidx.core.util.Pair;
+import androidx.fragment.app.DialogFragment;
 
-    public final static String PACKET_TYPE_MOUSEPAD_REQUEST = "kdeconnect.mousepad.request";
-    public final static String PACKET_TYPE_MOUSEPAD_ECHO = "kdeconnect.mousepad.echo";
-    public final static String PACKET_TYPE_MOUSEPAD_KEYBOARDSTATE = "kdeconnect.mousepad.keyboardstate";
+@PluginFactory.LoadablePlugin
+public class RemoteKeyboardPlugin extends Plugin implements SharedPreferences.OnSharedPreferenceChangeListener {
+
+    private final static String PACKET_TYPE_MOUSEPAD_REQUEST = "kdeconnect.mousepad.request";
+    private final static String PACKET_TYPE_MOUSEPAD_ECHO = "kdeconnect.mousepad.echo";
+    private final static String PACKET_TYPE_MOUSEPAD_KEYBOARDSTATE = "kdeconnect.mousepad.keyboardstate";
 
     /**
      * Track and expose plugin instances to allow for a 'connected'-indicator in the IME:
      */
-    private static ArrayList<RemoteKeyboardPlugin> instances = new ArrayList<>();
-    private static ReentrantLock instancesLock = new ReentrantLock(true);
+    private static final ArrayList<RemoteKeyboardPlugin> instances = new ArrayList<>();
+    private static final ReentrantLock instancesLock = new ReentrantLock(true);
 
-    public static ArrayList<RemoteKeyboardPlugin> getInstances() {
+    private static ArrayList<RemoteKeyboardPlugin> getInstances() {
         return instances;
     }
 
@@ -71,7 +64,7 @@ public class RemoteKeyboardPlugin extends Plugin {
         return instances.size() > 0;
     }
 
-    private static SparseIntArray specialKeyMap = new SparseIntArray();
+    private static final SparseIntArray specialKeyMap = new SparseIntArray();
 
     static {
         int i = 0;
@@ -84,31 +77,29 @@ public class RemoteKeyboardPlugin extends Plugin {
         specialKeyMap.put(++i, KeyEvent.KEYCODE_DPAD_DOWN);        // 7
         specialKeyMap.put(++i, KeyEvent.KEYCODE_PAGE_UP);          // 8
         specialKeyMap.put(++i, KeyEvent.KEYCODE_PAGE_DOWN);        // 9
-        if (Build.VERSION.SDK_INT >= 11) {
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_MOVE_HOME);    // 10
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_MOVE_END);     // 11
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_ENTER); // 12
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_FORWARD_DEL);  // 13
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_ESCAPE);       // 14
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_SYSRQ);        // 15
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_SCROLL_LOCK);  // 16
-            ++i;           // 17
-            ++i;           // 18
-            ++i;           // 19
-            ++i;           // 20
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F1);           // 21
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F2);           // 22
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F3);           // 23
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F4);           // 24
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F5);           // 25
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F6);           // 26
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F7);           // 27
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F8);           // 28
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F9);           // 29
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F10);          // 30
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F11);          // 31
-            specialKeyMap.put(++i, KeyEvent.KEYCODE_F12);          // 21
-        }
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_MOVE_HOME);    // 10
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_MOVE_END);     // 11
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_ENTER); // 12
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_FORWARD_DEL);  // 13
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_ESCAPE);       // 14
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_SYSRQ);        // 15
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_SCROLL_LOCK);  // 16
+        ++i;           // 17
+        ++i;           // 18
+        ++i;           // 19
+        ++i;           // 20
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F1);           // 21
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F2);           // 22
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F3);           // 23
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F4);           // 24
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F5);           // 25
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F6);           // 26
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F7);           // 27
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F8);           // 28
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F9);           // 29
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F10);          // 30
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F11);          // 31
+        specialKeyMap.put(++i, KeyEvent.KEYCODE_F12);          // 21
     }
 
     @Override
@@ -122,6 +113,13 @@ public class RemoteKeyboardPlugin extends Plugin {
         }
         if (RemoteKeyboardService.instance != null)
             RemoteKeyboardService.instance.handler.post(() -> RemoteKeyboardService.instance.updateInputView());
+
+        PreferenceManager.getDefaultSharedPreferences(context).registerOnSharedPreferenceChangeListener(this);
+
+        final boolean editingOnly = PreferenceManager.getDefaultSharedPreferences(context).getBoolean(context.getString(R.string.remotekeyboard_editing_only), true);
+        if (RemoteKeyboardService.instance != null)
+            notifyKeyboardState(editingOnly ? RemoteKeyboardService.instance.visible : true);
+
         return true;
     }
 
@@ -153,7 +151,7 @@ public class RemoteKeyboardPlugin extends Plugin {
 
     @Override
     public Drawable getIcon() {
-        return ContextCompat.getDrawable(context, R.drawable.ic_action_keyboard);
+        return ContextCompat.getDrawable(context, R.drawable.ic_action_keyboard_24dp);
     }
 
     @Override
@@ -388,5 +386,35 @@ public class RemoteKeyboardPlugin extends Plugin {
         NetworkPacket np = new NetworkPacket(PACKET_TYPE_MOUSEPAD_KEYBOARDSTATE);
         np.set("state", state);
         device.sendPacket(np);
+    }
+
+    String getDeviceId() {
+        return device.getDeviceId();
+    }
+
+    @Override
+    public boolean checkRequiredPermissions() {
+        return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_INPUT_METHODS).contains("org.kde.kdeconnect_tp");
+    }
+
+    @Override
+    public DialogFragment getPermissionExplanationDialog() {
+        return new StartActivityAlertDialogFragment.Builder()
+                .setTitle(R.string.pref_plugin_remotekeyboard)
+                .setMessage(R.string.no_permissions_remotekeyboard)
+                .setPositiveButton(R.string.open_settings)
+                .setNegativeButton(R.string.cancel)
+                .setIntentAction(Settings.ACTION_INPUT_METHOD_SETTINGS)
+                .setStartForResult(true)
+                .setRequestCode(MainActivity.RESULT_NEEDS_RELOAD)
+                .create();
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(context.getString(R.string.remotekeyboard_editing_only))) {
+            final boolean editingOnly = sharedPreferences.getBoolean(context.getString(R.string.remotekeyboard_editing_only), true);
+            notifyKeyboardState(editingOnly ? RemoteKeyboardService.instance.visible : true);
+        }
     }
 }

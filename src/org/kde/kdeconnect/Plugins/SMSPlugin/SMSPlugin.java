@@ -1,26 +1,14 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2019 Simon Redman <simon@ergotech.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
  */
 
 package org.kde.kdeconnect.Plugins.SMSPlugin;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -28,15 +16,15 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
-import android.support.v4.content.ContextCompat;
+import android.provider.Telephony;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
-import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,6 +33,7 @@ import org.kde.kdeconnect.Helpers.ContactsHelper;
 import org.kde.kdeconnect.Helpers.SMSHelper;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.Plugins.Plugin;
+import org.kde.kdeconnect.Plugins.PluginFactory;
 import org.kde.kdeconnect.Plugins.TelephonyPlugin.TelephonyPlugin;
 import org.kde.kdeconnect_tp.BuildConfig;
 import org.kde.kdeconnect_tp.R;
@@ -56,8 +45,17 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import androidx.core.content.ContextCompat;
+
+import com.klinker.android.send_message.ApnUtils;
+import com.klinker.android.send_message.Transaction;
+import com.klinker.android.send_message.Utils;
+import com.klinker.android.logger.Log;
+
 import static org.kde.kdeconnect.Plugins.TelephonyPlugin.TelephonyPlugin.PACKET_TYPE_TELEPHONY;
 
+@PluginFactory.LoadablePlugin
+@SuppressLint("InlinedApi")
 public class SMSPlugin extends Plugin {
 
     /**
@@ -66,19 +64,57 @@ public class SMSPlugin extends Plugin {
      * The body should contain the key "messages" mapping to an array of messages
      * <p>
      * For example:
-     * { "messages" : [
-     * { "event" : "sms",
-     * "messageBody" : "Hello",
-     * "phoneNumber" : "2021234567",
-     * "messageDate" : "1518846484880",
-     * "messageType" : "2",
-     * "threadID" : "132"
-     * },
-     * { ... },
-     * ...
+     * {
+     *   "version": 2                     // This is the second version of this packet type and
+     *                                    // version 1 packets (which did not carry this flag)
+     *                                    // are incompatible with the new format
+     *   "messages" : [
+     *   { "event"     : 1,               // 32-bit field containing a bitwise-or of event flags
+     *                                    // See constants declared in SMSHelper.Message for defined
+     *                                    // values and explanations
+     *     "body"      : "Hello",         // Text message body
+     *     "addresses": <List<Address>>   // List of Address objects, one for each participant of the conversation
+     *                                    // The user's Address is excluded so:
+     *                                    // If this is a single-target messsage, there will only be one
+     *                                    // Address (the other party)
+     *                                    // If this is an incoming multi-target message, the first Address is the
+     *                                    // sender and all other addresses are other parties to the conversation
+     *                                    // If this is an outgoing multi-target message, the sender is implicit
+     *                                    // (the user's phone number) and all Addresses are recipients
+     *     "date"      : "1518846484880", // Timestamp of the message
+     *     "type"      : "2",   // Compare with Android's
+     *                          // Telephony.TextBasedSmsColumns.MESSAGE_TYPE_*
+     *     "thread_id" : 132    // Thread to which the message belongs
+     *     "read"      : true   // Boolean representing whether a message is read or unread
+     *   },
+     *   { ... },
+     *   ...
      * ]
+     *
+     * The following optional fields of a message object may be defined
+     * "sub_id": <int> // Android's subscriber ID, which is basically used to determine which SIM card the message
+     *                 // belongs to. This is mostly useful when attempting to reply to an SMS with the correct
+     *                 // SIM card using PACKET_TYPE_SMS_REQUEST.
+     *                 // If this value is not defined or if it does not match a valid subscriber_id known by
+     *                 // Android, we will use whatever subscriber ID Android gives us as the default
+     *
+     * "attachments": <List<Attachment>>    // List of Attachment objects, one for each attached file in the message.
+     *
+     * An Attachment object looks like:
+     * {
+     *     "part_id": <long>                // part_id of the attachment used to read the file from MMS database
+     *     "mime_type": <int>               // contains the mime type of the file (image, video, audio, etc.)
+     *     "encoded_thumbnail": <String>    // Optional base64-encoded thumbnail preview of the content for types which support it
+     *     "unique_identifier": <String>    // Unique name of te file
+     * }
+     *
+     * An Address object looks like:
+     * {
+     *     "address": <String> // Address (phone number, email address, etc.) of this object
+     * }
      */
     private final static String PACKET_TYPE_SMS_MESSAGE = "kdeconnect.sms.messages";
+    private final static int SMS_MESSAGE_PACKET_VERSION = 2; // We *send* packets of this version
 
     /**
      * Packet sent to request a message be sent
@@ -87,12 +123,25 @@ public class SMSPlugin extends Plugin {
      * but be sure the Android side remains compatible with old desktop apps!
      * <p>
      * The body should look like so:
-     * { "sendSms": true,
-     * "phoneNumber": "542904563213",
-     * "messageBody": "Hi mom!"
+     * {
+     *   "version": 2,                     // The version of the packet being sent. Compare to SMS_REQUEST_PACKET_VERSION before attempting to handle.
+     *   "sendSms": true,                  // (Depreciated, ignored) Old versions of the desktop app used to mix phone calls, SMS, etc. in the same packet type and used this field to differentiate.
+     *   "phoneNumber": "542904563213",    // (Depreciated) Retained for backwards-compatibility. Old versions of the desktop app send a single phoneNumber. Use the Addresses field instead.
+     *   "addresses": <List of Addresses>, // The one or many targets of this message
+     *   "messageBody": "Hi mom!",         // Plain-text string to be sent as the body of the message (Optional if sending an attachment)
+     *   "attachments": <List of Attached files>,
+     *   "sub_id": 3859358340534           // Some magic number which tells Android which SIM card to use (Optional, if omitted, sends with the default SIM card)
+     * }
+     *
+     * An AttachmentContainer object looks like:
+     * {
+     *   "fileName": <String>             // Name of the file
+     *   "base64EncodedFile": <String>    // Base64 encoded file
+     *   "mimeType": <String>             // File type (eg: image/jpg, video/mp4 etc.)
      * }
      */
     private final static String PACKET_TYPE_SMS_REQUEST = "kdeconnect.sms.request";
+    private final static int SMS_REQUEST_PACKET_VERSION = 2; // We *handle* packets of this version or lower. Update this number only if future packets break backwards-compatibility.
 
     /**
      * Packet sent to request the most-recent message in each conversations on the device
@@ -104,11 +153,32 @@ public class SMSPlugin extends Plugin {
     /**
      * Packet sent to request all the messages in a particular conversation
      * <p>
-     * The body should contain the key "threadID" mapping to the threadID (as a string) being requested
-     * For example:
-     * { "threadID": 203 }
+     * The following fields are available:
+     * "threadID": <long>            // (Required) ThreadID to request
+     * "rangeStartTimestamp": <long> // (Optional) Millisecond epoch timestamp indicating the start of the range from which to return messages
+     * "numberToRequest": <long>     // (Optional) Number of messages to return, starting from rangeStartTimestamp.
+     *                               // May return fewer than expected if there are not enough or more than expected if many
+     *                               // messages have the same timestamp.
      */
     private final static String PACKET_TYPE_SMS_REQUEST_CONVERSATION = "kdeconnect.sms.request_conversation";
+
+    /**
+     * Packet sent to request an attachment file in a particular message of a conversation
+     * <p>
+     * The body should look like so:
+     * "part_id": <long>                // Part id of the attachment
+     * "unique_identifier": <String>    // This unique_identifier should come from a previous message packet's attachment field
+     */
+    private final static String PACKET_TYPE_SMS_REQUEST_ATTACHMENT = "kdeconnect.sms.request_attachment";
+
+    /**
+     * Packet used to send original attachment file from mms database to desktop
+     * <p>
+     * The following fields are available:
+     * "filename": <String>     // Name of the attachment file in the database
+     * "payload":               // Actual attachment file to be transferred
+     */
+    private final static String PACKET_TYPE_SMS_ATTACHMENT_FILE = "kdeconnect.sms.attachment_file";
 
     private static final String KEY_PREF_BLOCKED_NUMBERS = "telephony_blocked_numbers";
 
@@ -120,7 +190,7 @@ public class SMSPlugin extends Plugin {
 
             //Log.e("TelephonyPlugin","Telephony event: " + action);
 
-            if ("android.provider.Telephony.SMS_RECEIVED".equals(action)) {
+            if (Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(action)) {
 
                 final Bundle bundle = intent.getExtras();
                 if (bundle == null) return;
@@ -147,66 +217,82 @@ public class SMSPlugin extends Plugin {
     private long mostRecentTimestamp = 0;
     // Since the mostRecentTimestamp is accessed both from the plugin's thread and the ContentObserver
     // thread, make sure that access is coherent
-    private Lock mostRecentTimestampLock = new ReentrantLock();
+    private final Lock mostRecentTimestampLock = new ReentrantLock();
 
     private class MessageContentObserver extends ContentObserver {
-        SMSPlugin mPlugin;
 
         /**
          * Create a ContentObserver to watch the Messages database. onChange is called for
          * every subscribed change
          *
-         * @param parent  Plugin which owns this observer
          * @param handler Handler object used to make the callback
          */
-        public MessageContentObserver(SMSPlugin parent, Handler handler) {
+        MessageContentObserver(Handler handler) {
             super(handler);
-            mPlugin = parent;
         }
 
-        @Override
         /**
          * The onChange method is called whenever the subscribed-to database changes
          *
          * In this case, this onChange expects to be called whenever *anything* in the Messages
          * database changes and simply reports those updated messages to anyone who might be listening
          */
+        @Override
         public void onChange(boolean selfChange) {
-            if (mPlugin.mostRecentTimestamp == 0) {
-                // Since the timestamp has not been initialized, we know that nobody else
-                // has requested a message. That being the case, there is most likely
-                // nobody listening for message updates, so just drop them
-                return;
-            }
-            mostRecentTimestampLock.lock();
-            // Grab the mostRecentTimestamp into the local stack because reading the Messages
-            // database could potentially be a long operation
-            long mostRecentTimestamp = mPlugin.mostRecentTimestamp;
-            mostRecentTimestampLock.unlock();
-
-            List<SMSHelper.Message> messages = SMSHelper.getMessagesSinceTimestamp(mPlugin.context, mostRecentTimestamp);
-
-            if (messages.size() == 0) {
-                // Our onChange often gets called many times for a single message. Don't make unnecessary
-                // noise
-                return;
-            }
-
-            // Update the most recent counter
-            mostRecentTimestampLock.lock();
-            for (SMSHelper.Message message : messages) {
-                if (message.m_date > mostRecentTimestamp) {
-                    mPlugin.mostRecentTimestamp = message.m_date;
-                }
-            }
-            mostRecentTimestampLock.unlock();
-
-            // Send the alert about the update
-            device.sendPacket(constructBulkMessagePacket(messages));
+            sendLatestMessage();
         }
+
     }
 
-    @Deprecated
+    /**
+     * This receiver will be invoked only when the app will be set as the default sms app
+     * Whenever the app will be set as the default, the database update alert will be sent
+     * using messageUpdateReceiver and not the contentObserver class
+     */
+    private final BroadcastReceiver messagesUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            String action = intent.getAction();
+
+            if (Transaction.REFRESH.equals(action)) {
+                sendLatestMessage();
+            }
+        }
+    };
+
+    /**
+     * Helper method to read the latest message from the sms-mms database and sends it to the desktop
+     */
+    private void sendLatestMessage() {
+        // Lock so no one uses the mostRecentTimestamp between the moment we read it and the
+        // moment we update it. This is because reading the Messages DB can take long.
+        mostRecentTimestampLock.lock();
+
+        if (mostRecentTimestamp == 0) {
+            // Since the timestamp has not been initialized, we know that nobody else
+            // has requested a message. That being the case, there is most likely
+            // nobody listening for message updates, so just drop them
+            mostRecentTimestampLock.unlock();
+            return;
+        }
+        List<SMSHelper.Message> messages = SMSHelper.getMessagesInRange(context, null, mostRecentTimestamp, null, false);
+
+        long newMostRecentTimestamp = mostRecentTimestamp;
+        for (SMSHelper.Message message : messages) {
+            if (message == null || message.date <= newMostRecentTimestamp) {
+                newMostRecentTimestamp = message.date;
+            }
+        }
+
+        // Update the most recent counter
+        mostRecentTimestamp = newMostRecentTimestamp;
+        mostRecentTimestampLock.unlock();
+
+        // Send the alert about the update
+        device.sendPacket(constructBulkMessagePacket(messages));
+    }
+
     /**
      * Deliver an old-style SMS packet in response to a new message arriving
      *
@@ -218,6 +304,7 @@ public class SMSPlugin extends Plugin {
      *
      * @param messages Ordered list of parts of the message body which should be combined into a single message
      */
+    @Deprecated
     private void smsBroadcastReceivedDeprecated(ArrayList<SmsMessage> messages) {
 
         if (BuildConfig.DEBUG) {
@@ -267,13 +354,28 @@ public class SMSPlugin extends Plugin {
     public boolean onCreate() {
         permissionExplanation = R.string.telepathy_permission_explanation;
 
-        IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
+        IntentFilter filter = new IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION);
         filter.setPriority(500);
         context.registerReceiver(receiver, filter);
 
+        IntentFilter refreshFilter = new IntentFilter(Transaction.REFRESH);
+        refreshFilter.setPriority(500);
+        context.registerReceiver(messagesUpdateReceiver, refreshFilter);
+
         Looper helperLooper = SMSHelper.MessageLooper.getLooper();
-        ContentObserver messageObserver = new MessageContentObserver(this, new Handler(helperLooper));
+        ContentObserver messageObserver = new MessageContentObserver(new Handler(helperLooper));
         SMSHelper.registerObserver(messageObserver, context);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+            Log.w("SMSPlugin", "This is a very old version of Android. The SMS Plugin might not function as intended.");
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            ApnUtils.initDefaultApns(context, null);
+        }
+
+        // To see debug messages for Klinker library, uncomment the below line
+        //Log.setDebug(true);
 
         return true;
     }
@@ -290,22 +392,37 @@ public class SMSPlugin extends Plugin {
 
     @Override
     public boolean onPacketReceived(NetworkPacket np) {
+        long subID;
 
         switch (np.getType()) {
             case PACKET_TYPE_SMS_REQUEST_CONVERSATIONS:
-                return this.handleRequestConversations(np);
+                return this.handleRequestAllConversations(np);
             case PACKET_TYPE_SMS_REQUEST_CONVERSATION:
-                return this.handleRequestConversation(np);
+                return this.handleRequestSingleConversation(np);
             case PACKET_TYPE_SMS_REQUEST:
-                // Fall through to old-style handling
-                // This space may be filled in differently once MMS support is implemented
+                String textMessage = np.getString("messageBody");
+                subID = np.getLong("subID", -1);
+
+                List<SMSHelper.Address> addressList = SMSHelper.jsonArrayToAddressList(np.getJSONArray("addresses"));
+                if (addressList == null) {
+                    // If the List of Address is null, then the SMS_REQUEST packet is
+                    // most probably from the older version of the desktop app.
+                    addressList = new ArrayList<>();
+                    addressList.add(new SMSHelper.Address(np.getString("phoneNumber")));
+                }
+
+                SmsMmsUtils.sendMessage(context, textMessage, addressList, (int) subID);
+                break;
+
             case TelephonyPlugin.PACKET_TYPE_TELEPHONY_REQUEST:
                 if (np.getBoolean("sendSms")) {
                     String phoneNo = np.getString("phoneNumber");
                     String sms = np.getString("messageBody");
+                    subID = np.getLong("subID", -1);
 
                     try {
-                        SmsManager smsManager = SmsManager.getDefault();
+                        SmsManager smsManager = subID == -1? SmsManager.getDefault() :
+                            SmsManager.getSmsManagerForSubscriptionId((int) subID);
                         ArrayList<String> parts = smsManager.divideMessage(sms);
 
                         // If this message turns out to fit in a single SMS, sendMultipartTextMessage
@@ -315,9 +432,24 @@ public class SMSPlugin extends Plugin {
                         //TODO: Notify other end
                     } catch (Exception e) {
                         //TODO: Notify other end
-                        Log.e("SMSPlugin", e.getMessage());
-                        e.printStackTrace();
+                        Log.e("SMSPlugin", "Exception", e);
                     }
+                }
+                break;
+
+            case PACKET_TYPE_SMS_REQUEST_ATTACHMENT:
+                long partID = np.getLong("part_id");
+                String uniqueIdentifier = np.getString("unique_identifier");
+
+                NetworkPacket networkPacket = SmsMmsUtils.partIdToMessageAttachmentPacket(
+                        context,
+                        partID,
+                        uniqueIdentifier,
+                        PACKET_TYPE_SMS_ATTACHMENT_FILE
+                );
+
+                if (networkPacket != null) {
+                    device.sendPacket(networkPacket);
                 }
                 break;
         }
@@ -331,7 +463,7 @@ public class SMSPlugin extends Plugin {
      * @param messages Messages to include in the packet
      * @return NetworkPacket of type PACKET_TYPE_SMS_MESSAGE
      */
-    public static NetworkPacket constructBulkMessagePacket(Collection<SMSHelper.Message> messages) {
+    private static NetworkPacket constructBulkMessagePacket(Collection<SMSHelper.Message> messages) {
         NetworkPacket reply = new NetworkPacket(PACKET_TYPE_SMS_MESSAGE);
 
         JSONArray body = new JSONArray();
@@ -340,16 +472,14 @@ public class SMSPlugin extends Plugin {
             try {
                 JSONObject json = message.toJSONObject();
 
-                json.put("event", "sms");
-
                 body.put(json);
             } catch (JSONException e) {
-                Log.e("Conversations", "Error serializing message");
+                Log.e("Conversations", "Error serializing message", e);
             }
         }
 
         reply.set("messages", body);
-        reply.set("event", "batch_messages");
+        reply.set("version", SMS_MESSAGE_PACKET_VERSION);
 
         return reply;
     }
@@ -359,15 +489,15 @@ public class SMSPlugin extends Plugin {
      * <p>
      * Send one packet of type PACKET_TYPE_SMS_MESSAGE with the first message in all conversations
      */
-    private boolean handleRequestConversations(NetworkPacket packet) {
+    private boolean handleRequestAllConversations(NetworkPacket packet) {
         Map<SMSHelper.ThreadID, SMSHelper.Message> conversations = SMSHelper.getConversations(this.context);
 
         // Prepare the mostRecentTimestamp counter based on these messages, since they are the most
         // recent in every conversation
         mostRecentTimestampLock.lock();
         for (SMSHelper.Message message : conversations.values()) {
-            if (message.m_date > mostRecentTimestamp) {
-                mostRecentTimestamp = message.m_date;
+            if (message.date > mostRecentTimestamp) {
+                mostRecentTimestamp = message.date;
             }
         }
         mostRecentTimestampLock.unlock();
@@ -379,10 +509,33 @@ public class SMSPlugin extends Plugin {
         return true;
     }
 
-    private boolean handleRequestConversation(NetworkPacket packet) {
-        SMSHelper.ThreadID threadID = new SMSHelper.ThreadID(packet.getInt("threadID"));
+    private boolean handleRequestSingleConversation(NetworkPacket packet) {
+        SMSHelper.ThreadID threadID = new SMSHelper.ThreadID(packet.getLong("threadID"));
 
-        List<SMSHelper.Message> conversation = SMSHelper.getMessagesInThread(this.context, threadID);
+        Long rangeStartTimestamp = packet.getLong("rangeStartTimestamp", -1);
+        Long numberToGet = packet.getLong("numberToRequest", -1);
+
+        if (numberToGet < 0) {
+            numberToGet = null;
+        }
+
+        List<SMSHelper.Message> conversation;
+        if (rangeStartTimestamp < 0) {
+            conversation = SMSHelper.getMessagesInThread(this.context, threadID, numberToGet);
+        } else {
+            conversation = SMSHelper.getMessagesInRange(this.context, threadID, rangeStartTimestamp, numberToGet, true);
+        }
+
+        // Sometimes when desktop app is kept open while android app is restarted for any reason
+        // mostRecentTimeStamp must be updated in that scenario too if a user request for a
+        // single conversation and not the entire conversation list
+        mostRecentTimestampLock.lock();
+        for (SMSHelper.Message message : conversation) {
+            if (message.date > mostRecentTimestamp) {
+                mostRecentTimestamp = message.date;
+            }
+        }
+        mostRecentTimestampLock.unlock();
 
         NetworkPacket reply = constructBulkMessagePacket(conversation);
 
@@ -403,6 +556,10 @@ public class SMSPlugin extends Plugin {
         return false;
     }
 
+    @Override
+    public boolean hasSettings() {
+        return true;
+    }
 
     @Override
     public String[] getSupportedPacketTypes() {
@@ -410,17 +567,54 @@ public class SMSPlugin extends Plugin {
                 PACKET_TYPE_SMS_REQUEST,
                 TelephonyPlugin.PACKET_TYPE_TELEPHONY_REQUEST,
                 PACKET_TYPE_SMS_REQUEST_CONVERSATIONS,
-                PACKET_TYPE_SMS_REQUEST_CONVERSATION
+                PACKET_TYPE_SMS_REQUEST_CONVERSATION,
+                PACKET_TYPE_SMS_REQUEST_ATTACHMENT
         };
     }
 
     @Override
     public String[] getOutgoingPacketTypes() {
-        return new String[]{PACKET_TYPE_SMS_MESSAGE};
+        return new String[]{
+                PACKET_TYPE_SMS_MESSAGE,
+                PACKET_TYPE_SMS_ATTACHMENT_FILE
+        };
     }
 
     @Override
     public String[] getRequiredPermissions() {
-        return new String[]{Manifest.permission.SEND_SMS};
+        return new String[]{
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.READ_SMS,
+                // READ_PHONE_STATE should be optional, since we can just query the user, but that
+                // requires a GUI implementation for querying the user!
+                Manifest.permission.READ_PHONE_STATE,
+        };
+    }
+
+    /**
+     * Permissions required for sending and receiving MMs messages
+     */
+    public static String[] getMmsPermissions() {
+        return new String[]{
+                Manifest.permission.RECEIVE_SMS,
+                Manifest.permission.RECEIVE_MMS,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.CHANGE_NETWORK_STATE,
+                Manifest.permission.WAKE_LOCK,
+        };
+    }
+
+    /**
+     * With versions older than KITKAT, lots of the content providers used in SMSHelper become
+     * un-documented. Most manufacturers *did* do things the same way as was done in mainline
+     * Android at that time, but some did not. If the manufacturer followed the default route,
+     * everything will be fine. If not, the plugin will crash. But, since we have a global catch-all
+     * in Device.onPacketReceived, it will not crash catastrophically.
+     * The onCreated method of this SMSPlugin complains if a version older than KitKat is loaded,
+     * but it still allowed in the optimistic hope that things will "just work"
+     */
+    @Override
+    public int getMinSdk() {
+        return Build.VERSION_CODES.FROYO;
     }
 }

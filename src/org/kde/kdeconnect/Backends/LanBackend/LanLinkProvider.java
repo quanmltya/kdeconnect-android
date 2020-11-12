@@ -1,28 +1,13 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect.Backends.LanBackend;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
@@ -32,9 +17,8 @@ import org.kde.kdeconnect.Backends.BaseLinkProvider;
 import org.kde.kdeconnect.BackgroundService;
 import org.kde.kdeconnect.Device;
 import org.kde.kdeconnect.Helpers.DeviceHelper;
-import org.kde.kdeconnect.Helpers.NetworkHelper;
 import org.kde.kdeconnect.Helpers.SecurityHelpers.SslHelper;
-import org.kde.kdeconnect.Helpers.StringsHelper;
+import org.kde.kdeconnect.Helpers.TrustedNetworkHelper;
 import org.kde.kdeconnect.NetworkPacket;
 import org.kde.kdeconnect.UserInterface.CustomDevicesActivity;
 
@@ -58,6 +42,8 @@ import java.util.TimerTask;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 
+import kotlin.text.Charsets;
+
 /**
  * This BaseLinkProvider creates {@link LanLink}s to other devices on the same
  * WiFi network. The first packet sent over a socket must be an
@@ -67,26 +53,24 @@ import javax.net.ssl.SSLSocket;
  */
 public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDisconnectedCallback {
 
-    public static final int MIN_VERSION_WITH_SSL_SUPPORT = 6;
-    public static final int MIN_VERSION_WITH_NEW_PORT_SUPPORT = 7;
-
-    final static int MIN_PORT_LEGACY = 1714;
-    final static int MIN_PORT = 1716;
-    final static int MAX_PORT = 1764;
+    private final static int MIN_PORT = 1716;
+    private final static int MAX_PORT = 1764;
     final static int PAYLOAD_TRANSFER_MIN_PORT = 1739;
 
-    final Context context;
+    private final Context context;
 
     private final HashMap<String, LanLink> visibleComputers = new HashMap<>();  //Links by device id
 
-    ServerSocket tcpServer;
+    private ServerSocket tcpServer;
     private DatagramSocket udpServer;
-    private DatagramSocket udpServerOldPort;
 
-    boolean listening = false;
+    private long lastBroadcast = 0;
+    private final static long delayBetweenBroadcasts = 500;
+
+    private boolean listening = false;
 
     // To prevent infinte loop between Android < IceCream because both device can only broadcast identity package but cannot connect via TCP
-    ArrayList<InetAddress> reverseConnectionBlackList = new ArrayList<>();
+    private final ArrayList<InetAddress> reverseConnectionBlackList = new ArrayList<>();
 
     @Override // SocketClosedCallback
     public void linkDisconnected(LanLink brokenLink) {
@@ -96,7 +80,7 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
     }
 
     //They received my UDP broadcast and are connecting to me. The first thing they sned should be their identity.
-    void tcpPacketReceived(Socket socket) throws Exception {
+    private void tcpPacketReceived(Socket socket) {
 
         NetworkPacket networkPacket;
         try {
@@ -105,7 +89,7 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
             networkPacket = NetworkPacket.unserialize(message);
             //Log.e("TcpListener","Received TCP package: "+networkPacket.serialize());
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("KDE/LanLinkProvider", "Exception while receiving TCP packet", e);
             return;
         }
 
@@ -119,13 +103,13 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
     }
 
     //I've received their broadcast and should connect to their TCP socket and send my identity.
-    void udpPacketReceived(DatagramPacket packet) throws Exception {
+    private void udpPacketReceived(DatagramPacket packet) {
 
         final InetAddress address = packet.getAddress();
 
         try {
 
-            String message = new String(packet.getData(), StringsHelper.UTF8);
+            String message = new String(packet.getData(), Charsets.UTF_8);
             final NetworkPacket identityPacket = NetworkPacket.unserialize(message);
             final String deviceId = identityPacket.getString("deviceId");
             if (!identityPacket.getType().equals(NetworkPacket.PACKET_TYPE_IDENTITY)) {
@@ -137,11 +121,6 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
                     //Ignore my own broadcast
                     return;
                 }
-            }
-
-            if (identityPacket.getInt("protocolVersion") >= MIN_VERSION_WITH_NEW_PORT_SUPPORT && identityPacket.getInt("tcpPort") < MIN_PORT) {
-                Log.w("KDE/LanLinkProvider", "Ignoring a udp broadcast from legacy port because it comes from a device which knows about the new port.");
-                return;
             }
 
             Log.i("KDE/LanLinkProvider", "Broadcast identity package received from " + identityPacket.getString("deviceName"));
@@ -160,8 +139,7 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
             identityPacketReceived(identityPacket, socket, LanLink.ConnectionStarted.Remotely);
 
         } catch (Exception e) {
-            Log.e("KDE/LanLinkProvider", "Cannot connect to " + address);
-            e.printStackTrace();
+            Log.e("KDE/LanLinkProvider", "Cannot connect to " + address, e);
             if (!reverseConnectionBlackList.contains(address)) {
                 Log.w("KDE/LanLinkProvider", "Blacklisting " + address);
                 reverseConnectionBlackList.add(address);
@@ -178,11 +156,11 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
         }
     }
 
-    void configureSocket(Socket socket) {
+    private void configureSocket(Socket socket) {
         try {
             socket.setKeepAlive(true);
         } catch (SocketException e) {
-            e.printStackTrace();
+            Log.e("LanLink", "Exception", e);
         }
     }
 
@@ -210,65 +188,58 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
         // If I'm the TCP server I will be the SSL client and viceversa.
         final boolean clientMode = (connectionStarted == LanLink.ConnectionStarted.Locally);
 
-        // Add ssl handler if device uses new protocol
+        // Do the SSL handshake
         try {
-            if (identityPacket.getInt("protocolVersion") >= MIN_VERSION_WITH_SSL_SUPPORT) {
+            SharedPreferences preferences = context.getSharedPreferences("trusted_devices", Context.MODE_PRIVATE);
+            boolean isDeviceTrusted = preferences.getBoolean(deviceId, false);
 
-                SharedPreferences preferences = context.getSharedPreferences("trusted_devices", Context.MODE_PRIVATE);
-                boolean isDeviceTrusted = preferences.getBoolean(deviceId, false);
+            if (isDeviceTrusted && !SslHelper.isCertificateStored(context, deviceId)) {
+                //Device paired with and old version, we can't use it as we lack the certificate
+                BackgroundService.RunCommand(context, service -> {
+                    Device device = service.getDevice(deviceId);
+                    if (device == null) return;
+                    device.unpair();
+                    //Retry as unpaired
+                    identityPacketReceived(identityPacket, socket, connectionStarted);
+                });
+            }
 
-                if (isDeviceTrusted && !SslHelper.isCertificateStored(context, deviceId)) {
-                    //Device paired with and old version, we can't use it as we lack the certificate
+            Log.i("KDE/LanLinkProvider", "Starting SSL handshake with " + identityPacket.getString("deviceName") + " trusted:" + isDeviceTrusted);
+
+            final SSLSocket sslsocket = SslHelper.convertToSslSocket(context, socket, deviceId, isDeviceTrusted, clientMode);
+            sslsocket.addHandshakeCompletedListener(event -> {
+                String mode = clientMode ? "client" : "server";
+                try {
+                    Certificate certificate = event.getPeerCertificates()[0];
+                    identityPacket.set("certificate", Base64.encodeToString(certificate.getEncoded(), 0));
+                    Log.i("KDE/LanLinkProvider", "Handshake as " + mode + " successful with " + identityPacket.getString("deviceName") + " secured with " + event.getCipherSuite());
+                    addLink(identityPacket, sslsocket, connectionStarted);
+                } catch (Exception e) {
+                    Log.e("KDE/LanLinkProvider", "Handshake as " + mode + " failed with " + identityPacket.getString("deviceName"), e);
                     BackgroundService.RunCommand(context, service -> {
                         Device device = service.getDevice(deviceId);
                         if (device == null) return;
                         device.unpair();
-                        //Retry as unpaired
-                        identityPacketReceived(identityPacket, socket, connectionStarted);
                     });
                 }
-
-                Log.i("KDE/LanLinkProvider", "Starting SSL handshake with " + identityPacket.getString("deviceName") + " trusted:" + isDeviceTrusted);
-
-                final SSLSocket sslsocket = SslHelper.convertToSslSocket(context, socket, deviceId, isDeviceTrusted, clientMode);
-                sslsocket.addHandshakeCompletedListener(event -> {
-                    String mode = clientMode ? "client" : "server";
-                    try {
-                        Certificate certificate = event.getPeerCertificates()[0];
-                        identityPacket.set("certificate", Base64.encodeToString(certificate.getEncoded(), 0));
-                        Log.i("KDE/LanLinkProvider", "Handshake as " + mode + " successful with " + identityPacket.getString("deviceName") + " secured with " + event.getCipherSuite());
-                        addLink(identityPacket, sslsocket, connectionStarted);
-                    } catch (Exception e) {
-                        Log.e("KDE/LanLinkProvider", "Handshake as " + mode + " failed with " + identityPacket.getString("deviceName"));
-                        e.printStackTrace();
-                        BackgroundService.RunCommand(context, service -> {
-                            Device device = service.getDevice(deviceId);
-                            if (device == null) return;
-                            device.unpair();
-                        });
+            });
+            //Handshake is blocking, so do it on another thread and free this thread to keep receiving new connection
+            new Thread(() -> {
+                try {
+                    synchronized (this) {
+                        sslsocket.startHandshake();
                     }
-                });
-                //Handshake is blocking, so do it on another thread and free this thread to keep receiving new connection
-                new Thread(() -> {
-                    try {
-                        synchronized (this) {
-                            sslsocket.startHandshake();
-                        }
-                    } catch (Exception e) {
-                        Log.e("KDE/LanLinkProvider", "Handshake failed with " + identityPacket.getString("deviceName"));
-                        e.printStackTrace();
+                } catch (Exception e) {
+                    Log.e("KDE/LanLinkProvider", "Handshake failed with " + identityPacket.getString("deviceName"), e);
 
-                        //String[] ciphers = sslsocket.getSupportedCipherSuites();
-                        //for (String cipher : ciphers) {
-                        //    Log.i("SupportedCiphers","cipher: " + cipher);
-                        //}
-                    }
-                }).start();
-            } else {
-                addLink(identityPacket, socket, connectionStarted);
-            }
+                    //String[] ciphers = sslsocket.getSupportedCipherSuites();
+                    //for (String cipher : ciphers) {
+                    //    Log.i("SupportedCiphers","cipher: " + cipher);
+                    //}
+                }
+            }).start();
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("LanLink", "Exception", e);
         }
 
     }
@@ -284,9 +255,9 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
      * @param identityPacket   representation of remote device
      * @param socket           a new Socket, which should be used to receive packets from the remote device
      * @param connectionOrigin which side started this connection
-     * @throws IOException if an exception is thrown by {@link LanLink#reset(Socket, LanLink.ConnectionStarted)}
+     * @throws IOException if an exception is thrown by {@link LanLink#reset(SSLSocket, LanLink.ConnectionStarted)}
      */
-    private void addLink(final NetworkPacket identityPacket, Socket socket, LanLink.ConnectionStarted connectionOrigin) throws IOException {
+    private void addLink(final NetworkPacket identityPacket, SSLSocket socket, LanLink.ConnectionStarted connectionOrigin) throws IOException {
 
         String deviceId = identityPacket.getString("deviceId");
         LanLink currentLink = visibleComputers.get(deviceId);
@@ -308,16 +279,14 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
         this.context = context;
     }
 
-    private DatagramSocket setupUdpListener(int udpPort) {
-        final DatagramSocket server;
+    private void setupUdpListener() {
         try {
-            server = new DatagramSocket(udpPort);
-            server.setReuseAddress(true);
-            server.setBroadcast(true);
+            udpServer = new DatagramSocket(MIN_PORT);
+            udpServer.setReuseAddress(true);
+            udpServer.setBroadcast(true);
         } catch (SocketException e) {
-            Log.e("LanLinkProvider", "Error creating udp server");
-            e.printStackTrace();
-            return null;
+            Log.e("LanLinkProvider", "Error creating udp server", e);
+            return;
         }
         new Thread(() -> {
             while (listening) {
@@ -325,44 +294,41 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
                 byte[] data = new byte[bufferSize];
                 DatagramPacket packet = new DatagramPacket(data, bufferSize);
                 try {
-                    server.receive(packet);
+                    udpServer.receive(packet);
                     udpPacketReceived(packet);
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.e("LanLinkProvider", "UdpReceive exception");
+                    Log.e("LanLinkProvider", "UdpReceive exception", e);
                 }
             }
             Log.w("UdpListener", "Stopping UDP listener");
         }).start();
-        return server;
     }
 
     private void setupTcpListener() {
-
         try {
             tcpServer = openServerSocketOnFreePort(MIN_PORT);
-            new Thread(() -> {
-                while (listening) {
-                    try {
-                        Socket socket = tcpServer.accept();
-                        configureSocket(socket);
-                        tcpPacketReceived(socket);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        Log.e("LanLinkProvider", "TcpReceive exception");
-                    }
-                }
-                Log.w("TcpListener", "Stopping TCP listener");
-            }).start();
-
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("LanLinkProvider", "Error creating tcp server", e);
+            return;
         }
+        new Thread(() -> {
+            while (listening) {
+                try {
+                    Socket socket = tcpServer.accept();
+                    configureSocket(socket);
+                    tcpPacketReceived(socket);
+                } catch (Exception e) {
+                    Log.e("LanLinkProvider", "TcpReceive exception", e);
+                }
+            }
+            Log.w("TcpListener", "Stopping TCP listener");
+        }).start();
+
     }
 
     static ServerSocket openServerSocketOnFreePort(int minPort) throws IOException {
         int tcpPort = minPort;
-        while (tcpPort < MAX_PORT) {
+        while (tcpPort <= MAX_PORT) {
             try {
                 ServerSocket candidateServer = new ServerSocket();
                 candidateServer.bind(new InetSocketAddress(tcpPort));
@@ -370,40 +336,48 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
                 return candidateServer;
             } catch (IOException e) {
                 tcpPort++;
+                if (tcpPort == MAX_PORT) {
+                    Log.e("KDE/LanLink", "No ports available");
+                    throw e; //Propagate exception
+                }
             }
         }
-        Log.e("KDE/LanLink", "No ports available");
-        throw new IOException("No ports available");
+        throw new RuntimeException("This should not be reachable");
     }
 
     private void broadcastUdpPacket() {
-
-        if (NetworkHelper.isOnMobileNetwork(context)) {
-            Log.w("LanLinkProvider", "On 3G network, not sending broadcast.");
+        if (System.currentTimeMillis() < lastBroadcast + delayBetweenBroadcasts) {
+            Log.i("LanLinkProvider", "broadcastUdpPacket: relax cowboy");
             return;
         }
+        lastBroadcast = System.currentTimeMillis();
 
         new Thread(() -> {
+            ArrayList<String> iplist = CustomDevicesActivity
+                    .getCustomDeviceList(PreferenceManager.getDefaultSharedPreferences(context));
 
-            String deviceListPrefs = PreferenceManager.getDefaultSharedPreferences(context).getString(CustomDevicesActivity.KEY_CUSTOM_DEVLIST_PREFERENCE, "");
-            ArrayList<String> iplist = new ArrayList<>();
-            if (!deviceListPrefs.isEmpty()) {
-                iplist = CustomDevicesActivity.deserializeIpList(deviceListPrefs);
+            if (TrustedNetworkHelper.isTrustedNetwork(context)) {
+                iplist.add("255.255.255.255"); //Default: broadcast.
+            } else {
+                Log.i("LanLinkProvider", "Current network isn't trusted, not broadcasting");
             }
-            iplist.add("255.255.255.255"); //Default: broadcast.
+
+            if (iplist.isEmpty()) {
+                return;
+            }
 
             NetworkPacket identity = NetworkPacket.createIdentityPacket(context);
-            identity.set("tcpPort", MIN_PORT);
+            int port = (tcpServer == null || !tcpServer.isBound()) ? MIN_PORT : tcpServer.getLocalPort();
+            identity.set("tcpPort", port);
             DatagramSocket socket = null;
             byte[] bytes = null;
             try {
                 socket = new DatagramSocket();
                 socket.setReuseAddress(true);
                 socket.setBroadcast(true);
-                bytes = identity.serialize().getBytes(StringsHelper.UTF8);
+                bytes = identity.serialize().getBytes(Charsets.UTF_8);
             } catch (Exception e) {
-                e.printStackTrace();
-                Log.e("KDE/LanLinkProvider", "Failed to create DatagramSocket");
+                Log.e("KDE/LanLinkProvider", "Failed to create DatagramSocket", e);
             }
 
             if (bytes != null) {
@@ -412,11 +386,9 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
                     try {
                         InetAddress client = InetAddress.getByName(ipstr);
                         socket.send(new DatagramPacket(bytes, bytes.length, client, MIN_PORT));
-                        socket.send(new DatagramPacket(bytes, bytes.length, client, MIN_PORT_LEGACY));
                         //Log.i("KDE/LanLinkProvider","Udp identity package sent to address "+client);
                     } catch (Exception e) {
-                        e.printStackTrace();
-                        Log.e("KDE/LanLinkProvider", "Sending udp identity package failed. Invalid address? (" + ipstr + ")");
+                        Log.e("KDE/LanLinkProvider", "Sending udp identity package failed. Invalid address? (" + ipstr + ")", e);
                     }
                 }
             }
@@ -435,19 +407,8 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
 
             listening = true;
 
-            udpServer = setupUdpListener(MIN_PORT);
-            udpServerOldPort = setupUdpListener(MIN_PORT_LEGACY);
-
-            // Due to certificate request from SSL server to client, the certificate request message from device with latest android version to device with
-            // old android version causes a FATAL ALERT message stating that incorrect certificate request
-            // Server is disabled on these devices and using a reverse connection strategy. This works well for connection of these devices with kde
-            // and newer android versions. Although devices with android version less than ICS cannot connect to other devices who also have android version less
-            // than ICS because server is disabled on both
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                Log.w("KDE/LanLinkProvider", "Not starting a TCP server because it's not supported on Android < 14. Operating only as client.");
-            } else {
-                setupTcpListener();
-            }
+            setupUdpListener();
+            setupTcpListener();
 
             broadcastUdpPacket();
         }
@@ -465,17 +426,12 @@ public class LanLinkProvider extends BaseLinkProvider implements LanLink.LinkDis
         try {
             tcpServer.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("LanLink", "Exception", e);
         }
         try {
             udpServer.close();
         } catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
-            udpServerOldPort.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("LanLink", "Exception", e);
         }
     }
 

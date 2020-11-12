@@ -1,5 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
+  <string name="kde_connect">KDE Connect</string>
+  <string name="foreground_notification_no_devices">Niet verbonden met enig apparaat</string>
+  <string name="foreground_notification_devices">Verbonden met: %s</string>
+  <string name="foreground_notification_send_clipboard">Klembord verzenden</string>
   <string name="pref_plugin_telephony">Telefoniemelder</string>
   <string name="pref_plugin_telephony_desc">Stuur meldingen voor inkomende oproepen</string>
   <string name="pref_plugin_battery">Batterijrapportage</string>
@@ -8,9 +12,10 @@
   <string name="pref_plugin_sftp_desc">Het bladeren in het bestandssysteem van het apparaat op afstand toestaan</string>
   <string name="pref_plugin_clipboard">Klembordsynchronisatie</string>
   <string name="pref_plugin_clipboard_desc">De inhoud van het klembord delen</string>
+  <string name="pref_plugin_clipboard_sent">Klembord verzonden</string>
   <string name="pref_plugin_mousepad">Invoer op afstand</string>
   <string name="pref_plugin_mousepad_desc">Uw telefoon of tablet gebruiken als een touchpad en toetsenbord</string>
-  <string name="pref_plugin_presenter">Presentatie op afstand</string>
+  <string name="pref_plugin_presenter">Diavoorstelling op afstand</string>
   <string name="pref_plugin_presenter_desc">Uw apparaat gebruiken om dia\'s te wisselen in een presentatie</string>
   <string name="pref_plugin_remotekeyboard">Toetsaanslagen van afstand ontvangen</string>
   <string name="pref_plugin_remotekeyboard_desc">Toetsaanslaggebeurtenissen ontvangen van externe apparaten</string>
@@ -28,13 +33,14 @@
   <string name="pref_plugin_receive_notifications_desc">Meldingen van het andere apparaat ontvangen en tonen op Android</string>
   <string name="pref_plugin_sharereceiver">Delen en Ontvangen</string>
   <string name="pref_plugin_sharereceiver_desc">Bestanden en URL\'s delen tussen apparaten</string>
-  <string name="plugin_not_available">Deze functie is niet beschikbaar in uw versie van Android</string>
   <string name="device_list_empty">Geen apparaten</string>
   <string name="ok">OK</string>
+  <string name="sad_ok">OK :(</string>
   <string name="cancel">Annuleren</string>
   <string name="open_settings">Instellingen openen</string>
   <string name="no_permissions">U moet toestemming geven voor toegang tot meldingen</string>
   <string name="no_permission_mprisreceiver">Om in staat te zijn uw mediaspelers te besturen moet u toegan geven tot de meldingen</string>
+  <string name="no_permissions_remotekeyboard">Om indrukken van toetsen te ontvangen moet u het KDE Connect Remote Keyboard activeren</string>
   <string name="send_ping">Ping verzenden</string>
   <string name="open_mpris_controls">Bediening van multimedia</string>
   <string name="remotekeyboard_editing_only_title">Behandel toetsen op afstand alleen bij bewerken</string>
@@ -71,45 +77,58 @@
   <string name="category_connected_devices">Verbonden apparaten</string>
   <string name="category_not_paired_devices">Beschikbare apparaten</string>
   <string name="category_remembered_devices">Onthouden apparaten</string>
-  <string name="plugins_failed_to_load">Laden van plug-ins is mislukt (tap voor meer informatie):</string>
   <string name="device_menu_plugins">Plugin-instellingen</string>
   <string name="device_menu_unpair">Paar uit elkaar halen</string>
-  <string name="device_not_reachable">Gepaard apparaat niet bereikbaar</string>
   <string name="pair_new_device">Nieuw apparaat paren</string>
   <string name="unknown_device">Onbekend apparaat</string>
   <string name="error_not_reachable">Apparaat niet bereikbaar</string>
-  <string name="error_already_requested">Paarvorming is al gevraagd</string>
   <string name="error_already_paired">Apparaat is al gepaard</string>
   <string name="error_could_not_send_package">Kon pakket niet verzenden</string>
   <string name="error_timed_out">Tijdslimiet overschreden</string>
   <string name="error_canceled_by_user">Geannuleerd door gebruiker</string>
   <string name="error_canceled_by_other_peer">Geannuleerd door andere kant</string>
-  <string name="error_invalid_key">Ongeldige sleutel ontvangen</string>
   <string name="encryption_info_title">Versleutelde informatie</string>
   <string name="encryption_info_msg_no_ssl">Het andere apparaat gebruikt geen recente versie van KDE Connect, de verouderde versleutelingsmethode zal worden gebruikt.</string>
   <string name="my_device_fingerprint">De SHA1 vingerafdruk van het certificaat van uw apparaat is:</string>
   <string name="remote_device_fingerprint">De SHA1 vingerafdruk van het certificaat van het apparaat op afstand is:</string>
   <string name="pair_requested">Paarvorming gevraagd</string>
   <string name="pairing_request_from">Verzoek om een paar te maken van %1s</string>
-  <string name="received_url_title">Ontvangen koppeling van %1s</string>
-  <string name="received_url_text">Tap om \'%1s\' te openen</string>
-  <string name="incoming_file_title">Inkomend bestand van %1s</string>
-  <string name="incoming_file_text">%1s</string>
-  <string name="outgoing_file_title">Bezig bestand te verzenden naar %1s</string>
-  <string name="outgoing_files_title">Bezig bestanden te verzenden naar %1s</string>
-  <plurals name="outgoing_files_text">
-    <item quantity="one">Bestand %1$d verzenden</item>
-    <item quantity="other">%1$d bestanden uit %2$d verzenden</item>
+  <plurals name="incoming_file_title">
+    <item quantity="one">%1$d bestand wordt ontvangen vanaf %2$s</item>
+    <item quantity="other">%1$d bestanden worden ontvangen vanaf %2$s</item>
   </plurals>
-  <string name="received_file_title">Bestand ontvangen van %1s</string>
-  <string name="received_file_fail_title">Bestand ontvangen van %1s is mislukt</string>
+  <plurals name="incoming_files_text">
+    <item quantity="one">Bestand: %1s</item>
+    <item quantity="other">(Bestand %2$d van %3$d) : %1$s</item>
+  </plurals>
+  <plurals name="outgoing_file_title">
+    <item quantity="one">%1$d bestand wordt naar %2$s verzonden</item>
+    <item quantity="other">%1$d bestanden worden naar %2$s verzonden</item>
+  </plurals>
+  <plurals name="outgoing_files_text">
+    <item quantity="one">Bestand: %1$s</item>
+    <item quantity="other">(Bestand %2$d van %3$d) : %1$s</item>
+  </plurals>
+  <plurals name="received_files_title">
+    <item quantity="one">Ontvangen van bestand vanaf %1$s</item>
+    <item quantity="other">Ontvangen %2$d bestanden vanaf %1$s</item>
+  </plurals>
+  <plurals name="received_files_fail_title">
+    <item quantity="one">Ontvangen van bestand vanaf %1$s is mislukt</item>
+    <item quantity="other">Ontvangen van %2$d van %3$d bestanden vanaf %1$s is mislukt</item>
+  </plurals>
+  <plurals name="sent_files_title">
+    <item quantity="one">Bestand verzonden naar %1$s</item>
+    <item quantity="other">%2$d bestanden verzonden naar %1$s</item>
+  </plurals>
+  <plurals name="send_files_fail_title">
+    <item quantity="one">Verzenden van bestand naar %1$s is mislukt</item>
+    <item quantity="other">Verzenden van %2$d van %3$d bestanden naar %1$s is mislukt</item>
+  </plurals>
+  <string name="tap_to_open">Tik om te openen</string>
   <string name="received_file_text">Tap om \'%1s\' te openen</string>
-  <string name="sent_file_title">Bestand verzonden naar %1s</string>
-  <string name="sent_file_text">%1s</string>
-  <string name="sent_file_failed_title">Verzenden van bestand naar %1s is mislukt</string>
-  <string name="sent_file_failed_text">%1s</string>
+  <string name="cannot_create_file">Kan bestand %s niet aanmaken</string>
   <string name="tap_to_answer">Tap om te antwoorden</string>
-  <string name="reconnect">Opnieuw verbinden</string>
   <string name="right_click">Verstuur een rechter muisklik</string>
   <string name="middle_click">Verstuur een middelste muisklik</string>
   <string name="show_keyboard">Toetsenbord tonen</string>
@@ -117,10 +136,7 @@
   <string name="request_pairing">Verzoek voor maken van paar</string>
   <string name="pairing_accept">Accepteren</string>
   <string name="pairing_reject">Afwijzen</string>
-  <string name="device">Apparaat</string>
-  <string name="pair_device">Apparaat voor paar</string>
-  <string name="remote_control">Afstandsbediening</string>
-  <string name="settings">Instellingen van KDE Connect</string>
+  <string name="settings">Instellingen</string>
   <string name="mpris_play">Afspelen</string>
   <string name="mpris_pause">Pauzeren</string>
   <string name="mpris_previous">Vorige</string>
@@ -128,7 +144,6 @@
   <string name="mpris_ff">Snel vooruit</string>
   <string name="mpris_next">Volgende</string>
   <string name="mpris_volume">Volume</string>
-  <string name="mpris_settings">Instellingen voor multimedia</string>
   <string name="mpris_time_settings_title">Knoppen vooruit/terug</string>
   <string name="mpris_time_settings_summary">Pas de tijd aan om snel voorwaarts/terug te gaan bij indrukken</string>
   <string-array name="mpris_time_entries">
@@ -141,19 +156,16 @@
   <string name="mpris_notification_settings_title">Mediabesturingsmelding tonen</string>
   <string name="mpris_notification_settings_summary">Staat besturing van uw mediaspelers toe zonder KDE Connect te openen</string>
   <string name="share_to">Delen met...</string>
-  <string name="protocol_version_older">Dit apparaat gebruikt een oude protocolversie</string>
   <string name="protocol_version_newer">Dit apparaat gebruikt een nieuwere protocolversie</string>
-  <string name="general_settings">Algemene instellingen</string>
-  <string name="plugin_settings">Instellingen</string>
   <string name="plugin_settings_with_name">Instellingen van %s</string>
-  <string name="device_name">Apparaatnaam</string>
-  <string name="device_name_preference_summary">%s</string>
   <string name="invalid_device_name">Ongeldige apparaatnaam</string>
   <string name="shareplugin_text_saved">Oontvangen tekst, opgeslagen op klembord</string>
   <string name="custom_devices_settings">Aangepaste lijst apparaten</string>
-  <string name="pair_device_action">Een paar maken met een nieuw apparaat</string>
-  <string name="unpair_device_action">Paar %s uit elkaar halen</string>
   <string name="custom_device_list">Voeg apparaten toe per IP-adres</string>
+  <string name="custom_device_deleted">Aangepaste apparaat verwijderd</string>
+  <string name="custom_device_list_help">Als uw apparaat niet automatisch wordt gedetecteerd kunt u zijn IP-adres of hostnaam toevoegen door te klikken op de knop Zwevende actie</string>
+  <string name="custom_device_fab_hint">Een apparaat toevoegen</string>
+  <string name="undo">Ongedaan maken</string>
   <string name="share_notification_preference">Luidruchtige meldingen</string>
   <string name="share_notification_preference_summary">Vibreer en speel een geluidje bij ontvangen van een bestand</string>
   <string name="share_destination_customize">De bestemmingsmap aanpassen</string>
@@ -164,30 +176,45 @@
   <string name="share_received_file">\"%s\" delen</string>
   <string name="title_activity_notification_filter">Filter voor meldingen</string>
   <string name="filter_apps_info">Meldingen zullen gesynchroniseerd worden voor de geselecteerde apps.</string>
-  <string name="sftp_internal_storage">Interne opslag</string>
-  <string name="sftp_all_files">Alle bestanden</string>
   <string name="sftp_sdcard_num">SD-kaartje %d</string>
   <string name="sftp_sdcard">SD-kaartje</string>
   <string name="sftp_readonly">(alleen-lezen)</string>
   <string name="sftp_camera">Afbeeldingen van camera</string>
-  <string name="add_host">Host/IP-adres toevoegen</string>
-  <string name="add_host_hint">Hostnaam of IP-adres</string>
+  <string name="add_device_dialog_title">Apparaat toevoegen</string>
+  <string name="add_device_hint">Hostnaam of IP-adres</string>
+  <string name="sftp_preference_detected_sdcards">SD-kaarten gevonden</string>
+  <string name="sftp_preference_edit_sdcard_title">SD-kaart bewerken</string>
+  <string name="sftp_preference_configured_storage_locations">Opslaglocaties geconfigureerd</string>
+  <string name="sftp_preference_add_storage_location_title">Opslaglocatie toegevoegd</string>
+  <string name="sftp_preference_edit_storage_location">Opslaglocatie bewerken</string>
+  <string name="sftp_preference_add_camera_shortcut">Sneltoets voor cameramap toevoegen</string>
+  <string name="sftp_preference_add_camera_shortcut_summary_on">Een sneltoets naar de cameramap toevoegen</string>
+  <string name="sftp_preference_add_camera_shortcut_summary_off">Geen sneltoets naar de cameramap toevoegen</string>
+  <string name="sftp_storage_preference_storage_location">Opslaglocatie</string>
+  <string name="sftp_storage_preference_storage_location_already_configured">Deze locatie is al geconfigureerd</string>
+  <string name="sftp_storage_preference_click_to_select">klik om te selecteren</string>
+  <string name="sftp_storage_preference_display_name">Schermnaam</string>
+  <string name="sftp_storage_preference_display_name_already_used">Deze schermnaam wordt al gebruikt</string>
+  <string name="sftp_storage_preference_display_name_cannot_be_empty">Schermnaam mag niet leeg zijn</string>
+  <string name="sftp_action_mode_menu_delete">Verwijderen</string>
+  <string name="sftp_no_sdcard_detected">Geen SD-kaart gedetecteerd</string>
+  <string name="sftp_no_storage_locations_configured">Geen opslaglocaties geconfigureerd</string>
+  <string name="sftp_saf_permission_explanation">Om toegang te hebben tot bestanden op afstand moet u opslaglocaties configureren</string>
   <string name="no_players_connected">Geen spelers gevonden</string>
-  <string name="custom_dev_list_help">Deze optie alleen gebruiken als uw apparaat niet automatisch gedetecteerd wordt. Voer IP-adres of hostnaam hieronder in en klik op de knop om het aan de lijst toe te voegen. Klik op een bestaand item om het uit de lijst te verwijderen.</string>
-  <string name="mpris_player_on_device">%1$s op %2$s</string>
   <string name="send_files">Bestanden verzenden</string>
   <string name="pairing_title">Apparaten van KDE Connect</string>
   <string name="pairing_description">Andere apparaten met KDE Connect in uw zelfde netwerk zouden hier moeten verschijnen.</string>
-  <string name="device_paired">Gepaard apparaat</string>
   <string name="device_rename_title">Apparaat hernoemen</string>
   <string name="device_rename_confirm">Hernoemen</string>
-  <string name="refresh">Verversen</string>
+  <string name="refresh">Vernieuwen</string>
   <string name="unreachable_description">Dit gepaarde apparaat is niet bereikbaar. Ga na dat het is verbonden met uw zelfde netwerk.</string>
-  <string name="on_data_message">Het lijkt of op een mobiele gegevensverbinding zit. KDE Connect werkt alleen op locale netwerken.</string>
+  <string name="no_wifi">U bent niet verbonden met een Wi-Fi-netwerk, u zou dus niet in staat kunnen zijn om apparaten te zien. Klik hier om Wi-Fi in te schakelen.</string>
+  <string name="on_non_trusted_message">Niet op een vertrouwd netwerk: automatisch ontdekken is uitgeschakeld.</string>
   <string name="no_file_browser">Er zijn geen bestandsbrowsers geïnstalleerd.</string>
   <string name="pref_plugin_telepathy">SMS verzenden</string>
   <string name="pref_plugin_telepathy_desc">Stuur tekstberichten van uw bureaublad</string>
-  <string name="plugin_not_supported">Deze plug-in wordt niet ondersteund door het apparaat</string>
+  <string name="pref_plugin_telepathy_mms">MMS verzenden</string>
+  <string name="pref_plugin_telepathy_mms_desc">Om MMS te kunnen verzenden vanuit KDE Connect moet u het als de standaard SMS-app instellen.</string>
   <string name="findmyphone_title">Zoek mijn telefoon</string>
   <string name="findmyphone_title_tablet">Zoek mijn tablet</string>
   <string name="findmyphone_title_tv">Zoek mijn tv</string>
@@ -195,15 +222,13 @@
   <string name="findmyphone_found">Gevonden</string>
   <string name="open">Openen</string>
   <string name="close">Sluiten</string>
-  <string name="no_permissions_storage">U moet toestemming geven voor toegang tot de opslag</string>
   <string name="plugins_need_permission">Sommige plug-ins hebben toestemming nodig om te werken (tik voor meer informatie):</string>
   <string name="permission_explanation">Deze plug-in heeft toestemming nodig om te werken</string>
   <string name="optional_permission_explanation">U moet toestemming geven om alle functies in te schakelen</string>
   <string name="plugins_need_optional_permission">Sommige plug-ins hebben functies uitgeschakeld vanwege ontbrekende toestemming (tik voor meer informatie):</string>
-  <string name="sftp_permission_explanation">"Om toegang tot uw bestanden te krijgen vanuit uw PC heeft de app toestemming nodig voor toegang tot de opslag van uw telefoon "</string>
-  <string name="share_optional_permission_explanation">Om bestanden tussen uw telefoon en uw bureaublad te delen moet u toegang geven tot de opslag van uw telefoon</string>
+  <string name="share_optional_permission_explanation">Om gedeelde bestanden te ontvangen moet u een bestemmingsmap kiezen</string>
   <string name="telepathy_permission_explanation">Om een SMS te lezen of te schrijven vanaf uw bureaublad moet u toestemming geven tot SMS</string>
-  <string name="telephony_permission_explanation">Om telefoonoproepen en SMS te zien vanaf het bureaublad moet u toestemming geven tot telefoonoproepen en SMS</string>
+  <string name="telephony_permission_explanation">Om telefoonoproepen te zien op het bureaublad moet u toestemming geven tot telefoonoproeplogs en telefoonstatus</string>
   <string name="telephony_optional_permission_explanation">Om een naam van een contactpersoon te zien in plaats van een telefoonnummer moet u toegang geven tot de contacten in uw telefoon</string>
   <string name="contacts_permission_explanation">Om uw contactpersoennboek te delen met het bureaublad moet u contacten rechten geven</string>
   <string name="select_ringtone">Selecteer een ringtone</string>
@@ -214,14 +239,19 @@
   <string name="settings_icon_description">Pictogram voor instellingen</string>
   <string name="presenter_fullscreen">Volledig scherm</string>
   <string name="presenter_exit">Presentatie beëindigen</string>
-  <string name="presenter_lock_tip">U kunt uw apparaat vergrendelen om de volumetoetsen te gebruiken als knoppen voort vorige/volgende</string>
+  <string name="presenter_lock_tip">U kunt uw apparaat vergrendelen en de volumetoetsen gebruiken om naar de vorige/volgende dia te gaan</string>
   <string name="add_command">Een commando toevoegen</string>
   <string name="addcommand_explanation">Er zijn geen commando\'s geregistreerd</string>
   <string name="addcommand_explanation2">U kunt nieuwe commando\'s in de instellingen voor het KDE connect-systeem toevoegen</string>
   <string name="add_command_description">U kunt commando\'s toevoegen op het bureaublad</string>
   <string name="pref_plugin_mprisreceiver">Besturing van mediaspeler</string>
   <string name="pref_plugin_mprisreceiver_desc">Uw mediaspelers op uw telefoon besturen vanaf een andere apparaat</string>
-  <string name="dark_theme">Donker themea</string>
+  <string name="notification_channel_default">Overige meldingen</string>
+  <string name="notification_channel_persistent">Blijvende indicator</string>
+  <string name="notification_channel_media_control">Besturing van media</string>
+  <string name="notification_channel_filetransfer">Bestandsoverdracht</string>
+  <string name="notification_channel_high_priority">Hoge prioriteit</string>
+  <string name="notification_channel_sms_mms">Nieuw bericht</string>
   <string name="mpris_stop">Stop de huidige speler</string>
   <string name="copy_url_to_clipboard">URL-adres kopiëren naar klembord</string>
   <string name="clipboard_toast">Gekopieerd naar klembord</string>
@@ -235,4 +265,70 @@
   <string name="pref_plugin_systemvolume">Systeemvolume</string>
   <string name="pref_plugin_systemvolume_desc">Bestuur het systeemvolume vanaf uw apparaat op afstand</string>
   <string name="mute">Dempen</string>
+  <string name="all">Alles</string>
+  <string name="devices">Apparaten</string>
+  <string name="settings_rename">Apparaatnaam</string>
+  <string name="settings_dark_mode">Donker thema</string>
+  <string name="settings_more_settings_title">Meer instellingen</string>
+  <string name="settings_more_settings_text">Instellingen per apparaat kunnen gevonden worden onder \'Plug-in-instellingen\' vanuit een apparaat.</string>
+  <string name="setting_persistent_notification">Blijvende melding tonen</string>
+  <string name="setting_persistent_notification_oreo">Blijvende melding</string>
+  <string name="setting_persistent_notification_description">Tik om instellingen van meldingen in/uit te schakelen</string>
+  <string name="extra_options">Extra opties</string>
+  <string name="privacy_options">Privacyopties</string>
+  <string name="set_privacy_options">Stel uw privacyopties in</string>
+  <string name="block_contents">Inhoud van meldingen blokkeren</string>
+  <string name="block_images">Afbeeldingen in meldingen blokkeren</string>
+  <string name="notification_channel_receivenotification">Meldingen van andere apparaten</string>
+  <string name="take_picture">Start camera</string>
+  <string name="plugin_photo_desc">Start de camera-app om nemen en overdragen van afbeeldingen te vergemakkelijken</string>
+  <string name="no_app_for_opening">Geen geschikte toepassing gevonden om dit bestand te openen</string>
+  <string name="remote_keyboard_service">KDE Connect Toetsenbord op afstand</string>
+  <string name="presenter_pointer">Aanwijzer</string>
+  <string name="trusted_networks">Vertrouwde netwerken</string>
+  <string name="trusted_networks_desc">Automatisch ontdekken beperken tot bekende netwerken</string>
+  <string name="add_trusted_network">%1s toevoegen</string>
+  <string name="empty_trusted_networks_list_text">U hebt nog geen vertrouwd netwerk toegevoegd</string>
+  <string name="allow_all_networks_text">Allen toestaan</string>
+  <string name="location_permission_needed_title">Toestemming vereist</string>
+  <string name="location_permission_needed_desc">Android vereist de toestemming voor locatie om uw WiFi-netwerk te identificeren</string>
+  <string name="clipboard_android_x_incompat">Android 10 heeft toegang tot het klembord naar alle toepassingen verwijderd. Deze plug-in zal uitgeschakeld worden.</string>
+  <string name="mpris_open_url">Hier doorgaan met afspelen</string>
+  <string name="cant_open_url">Kan URL niet openen om door te gaan met afspelen</string>
+  <string name="bigscreen_home">Home</string>
+  <string name="bigscreen_up">Omhoog</string>
+  <string name="bigscreen_left">Links</string>
+  <string name="bigscreen_select">Selecteren</string>
+  <string name="bigscreen_right">Rechts</string>
+  <string name="bigscreen_down">Omlaag</string>
+  <string name="bigscreen_mic">Mic</string>
+  <string name="pref_plugin_bigscreen">Bigscreen op afstand</string>
+  <string name="pref_plugin_bigscreen_desc">Gebruik uw apparaat als een Bigscreen op afstand</string>
+  <string name="bigscreen_optional_permission_explanation">Om microfooninvoer vanaf uw telefoon te delen moet u toegang geven tot de geluidsinvoer van de telefoon</string>
+  <string name="bigscreen_speech_extra_prompt">Spraak</string>
+  <string name="message_reply_label">BEANTWOORDEN</string>
+  <string name="mark_as_read_label">MARKEREN ALS GELEZEN</string>
+  <string name="user_display_name">U</string>
+  <string name="set_default_sms_app_title">MMS verzenden</string>
+  <string name="set_group_message_as_mms_title">MMS verzenden naar groep</string>
+  <string name="set_long_text_as_mms_title">Lange tekst als MMS verzenden</string>
+  <string name="convert_to_mms_after_title">Naar MMS converteren</string>
+  <string-array name="convert_to_mms_after_entries">
+    <item>Na één bericht</item>
+    <item>Na twee berichten</item>
+    <item>Na drie berichten</item>
+    <item>Na vier berichten</item>
+    <item>Na vijf berichten</item>
+  </string-array>
+  <string name="theme_dialog_title">Thema kiezen</string>
+  <string-array name="theme_list">
+    <item>Op batterijbesparing instellen</item>
+    <item>Licht</item>
+    <item>Donker</item>
+  </string-array>
+  <string-array name="theme_list_v28">
+    <item>Systeemstandaard</item>
+    <item>Licht</item>
+    <item>Donker</item>
+  </string-array>
 </resources>

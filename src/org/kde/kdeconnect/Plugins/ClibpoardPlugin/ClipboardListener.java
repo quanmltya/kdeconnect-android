@@ -1,21 +1,7 @@
 /*
- * Copyright 2014 Albert Vaca Cintora <albertvaka@gmail.com>
+ * SPDX-FileCopyrightText: 2014 Albert Vaca Cintora <albertvaka@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License or (at your option) version 3 or any later version
- * accepted by the membership of KDE e.V. (or its successor approved
- * by the membership of KDE e.V.), which shall act as a proxy
- * defined in Section 14 of version 3 of the license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+ * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
 */
 
 package org.kde.kdeconnect.Plugins.ClibpoardPlugin;
@@ -28,6 +14,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.core.content.ContextCompat;
+
 import java.util.HashSet;
 
 @TargetApi(Build.VERSION_CODES.HONEYCOMB)
@@ -37,10 +25,11 @@ public class ClipboardListener {
         void clipboardChanged(String content);
     }
 
-    private HashSet<ClipboardObserver> observers = new HashSet<>();
+    private final HashSet<ClipboardObserver> observers = new HashSet<>();
 
     private final Context context;
     private String currentContent;
+    private long updateTimestamp;
 
     private ClipboardManager cm = null;
     private ClipboardManager.OnPrimaryClipChangedListener listener;
@@ -50,6 +39,7 @@ public class ClipboardListener {
     public static ClipboardListener instance(Context context) {
         if (_instance == null) {
             _instance = new ClipboardListener(context);
+            // FIXME: The _instance we return won't be completely initialized yet since initialization happens on a new thread (why?)
         }
         return _instance;
     }
@@ -62,15 +52,11 @@ public class ClipboardListener {
         observers.remove(observer);
     }
 
-    ClipboardListener(final Context ctx) {
+    private ClipboardListener(final Context ctx) {
         context = ctx;
 
-        if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-            return;
-        }
-
         new Handler(Looper.getMainLooper()).post(() -> {
-            cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            cm = ContextCompat.getSystemService(context, ClipboardManager.class);
             listener = () -> {
                 try {
 
@@ -80,7 +66,7 @@ public class ClipboardListener {
                     if (content.equals(currentContent)) {
                         return;
                     }
-
+                    updateTimestamp = System.currentTimeMillis();
                     currentContent = content;
 
                     for (ClipboardObserver observer : observers) {
@@ -95,13 +81,19 @@ public class ClipboardListener {
         });
     }
 
+    public String getCurrentContent() {
+        return currentContent;
+    }
+
+    public long getUpdateTimestamp() {
+        return updateTimestamp;
+    }
+
     @SuppressWarnings("deprecation")
     public void setText(String text) {
-        currentContent = text;
-        if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-            android.text.ClipboardManager clipboard = (android.text.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-            clipboard.setText(text);
-        } else {
+        if (cm != null) {
+            updateTimestamp = System.currentTimeMillis();
+            currentContent = text;
             cm.setText(text);
         }
     }

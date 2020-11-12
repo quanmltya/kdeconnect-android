@@ -8,9 +8,8 @@ build/
 target/
 classes/
 gradle
-gradlew
-gradlew.bat
 *.iml
 *.keystore
+!debug.keystore
 .directory
 GPUCache/
